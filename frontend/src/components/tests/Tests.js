@@ -3,6 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, Brain, ArrowLeft, TrendingUp, Award, RefreshCw, Play, Target, Calendar, Plus, Trash2, Edit, X } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
+import TestResults from './TestResults';
+import notificationService from '../../services/notificationService';
 
 // ===== BASE TEST COMPONENT =====
 const BaseTest = ({ testType, testName, instructions, children, onTestComplete, maxScore = 10, timeLimit = null }) => {
@@ -11,6 +13,8 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
   const [endTime, setEndTime] = useState(null);
   const [score, setScore] = useState(0);
   const [loading, setLoading] = useState(false);
+  const [testResult, setTestResult] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
 
   const startTest = useCallback(() => {
@@ -31,11 +35,11 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
   const submitResults = async () => {
     if (!startTime || !endTime) return;
     
-    setLoading(true);
+    setSubmitting(true);
     try {
       const duration = Math.round((endTime - startTime) / 1000);
       
-      await api.post('/tests/submit', {
+      const response = await api.post('/tests/submit', {
         test_type: testType,
         score: score,
         max_score: maxScore,
@@ -43,18 +47,35 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
         completed_at: endTime.toISOString()
       });
 
-      toast.success('Test results saved successfully! 🎉');
+      // Validate response structure
+      if (!response.data || !response.data.test_result) {
+        throw new Error('Invalid response structure from server');
+      }
+
+      // Store the complete test result with fallbacks
+      const completeTestResult = {
+        ...response.data.test_result,
+        performance_feedback: response.data.performance_feedback || {
+          level: 'Standard',
+          message: 'Test completed successfully'
+        },
+        next_steps: response.data.next_steps || ['Return to dashboard', 'Review your results']
+      };
       
-      // Navigate to dashboard after a short delay
-      setTimeout(() => {
-        navigate('/dashboard');
-      }, 2000);
+      setTestResult(completeTestResult);
+
+      // Notify through notification service
+      notificationService.notifyTestSaved(completeTestResult);
+      
+      // Show results screen
+      setCurrentStep('results');
       
     } catch (error) {
       console.error('Error submitting test results:', error);
-      toast.error('Failed to save test results. Please try again.');
+      const errorMessage = error.response?.data?.error || error.message || 'Failed to save test results. Please try again.';
+      toast.error(errorMessage);
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
@@ -63,6 +84,7 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
     setStartTime(null);
     setEndTime(null);
     setScore(0);
+    setTestResult(null);
   };
 
   const getScoreColor = (score) => {
@@ -200,102 +222,13 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
   // Results Step
   if (currentStep === 'results') {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-accent-50 flex items-center justify-center p-4">
-        <div className="max-w-2xl w-full">
-          <div className="bg-white rounded-3xl p-8 shadow-soft animate-scale-in">
-            {/* Results Header */}
-            <div className="text-center mb-8">
-              <div className="text-6xl mb-4">{getScoreEmoji(score)}</div>
-              <h1 className="text-4xl font-display font-bold text-gray-900 mb-4">
-                Test Complete!
-              </h1>
-              <p className="text-lg text-gray-600">
-                {getScoreMessage(score)}
-              </p>
-            </div>
-
-            {/* Score Display */}
-            <div className="text-center mb-8">
-              <div className={`inline-flex items-center justify-center w-32 h-32 bg-${getScoreColor(score)}-100 rounded-full mb-6`}>
-                <div className="text-center">
-                  <div className={`text-4xl font-bold text-${getScoreColor(score)}-600`}>
-                    {score}
-                  </div>
-                  <div className="text-sm text-gray-500">out of {maxScore}</div>
-                </div>
-              </div>
-              
-              <div className="text-center">
-                <h3 className="text-xl font-semibold text-gray-900 mb-2">Your Score</h3>
-                <div className={`inline-flex items-center px-4 py-2 rounded-full text-sm font-medium bg-${getScoreColor(score)}-100 text-${getScoreColor(score)}-800`}>
-                  {score >= 8 ? 'Excellent' : score >= 6 ? 'Good' : score >= 4 ? 'Fair' : 'Needs Improvement'}
-                </div>
-              </div>
-            </div>
-
-            {/* Test Details */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-              <div className="text-center p-4 bg-gray-50 rounded-2xl">
-                <div className="text-2xl font-bold text-primary-600 mb-1">
-                  {startTime && endTime ? Math.round((endTime - startTime) / 1000) : 0}
-                </div>
-                <div className="text-sm text-gray-600">Seconds</div>
-              </div>
-              <div className="text-center p-4 bg-gray-50 rounded-2xl">
-                <div className="text-2xl font-bold text-secondary-600 mb-1">
-                  {Math.round((score / maxScore) * 100)}%
-                </div>
-                <div className="text-sm text-gray-600">Accuracy</div>
-              </div>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <button
-                onClick={submitResults}
-                disabled={loading}
-                className="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-semibold rounded-2xl shadow-soft hover:shadow-medium transition-all duration-300 transform hover:-translate-y-1 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white mr-2"></div>
-                    Saving Results...
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle className="w-5 h-5 mr-2" />
-                    Save Results
-                  </>
-                )}
-              </button>
-              <button
-                onClick={retakeTest}
-                className="inline-flex items-center justify-center px-8 py-4 border-2 border-primary-200 text-primary-700 font-semibold rounded-2xl hover:bg-primary-50 transition-all duration-300"
-              >
-                <RefreshCw className="w-5 h-5 mr-2" />
-                Retake Test
-              </button>
-              <button
-                onClick={() => navigate('/tests')}
-                className="inline-flex items-center justify-center px-8 py-4 border-2 border-gray-200 text-gray-700 font-semibold rounded-2xl hover:bg-gray-50 transition-all duration-300"
-              >
-                <ArrowLeft className="w-5 h-5 mr-2" />
-                Back to Tests
-              </button>
-            </div>
-
-            {/* Encouragement */}
-            <div className="mt-8 text-center">
-              <p className="text-sm text-gray-500">
-                {score >= 7 
-                  ? "Keep up the great work! Regular testing helps maintain cognitive health." 
-                  : "Don't worry! Practice makes perfect. Consider retaking the test to improve your score."
-                }
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
+      <TestResults
+        testResult={testResult}
+        onRetake={retakeTest}
+        onViewHistory={() => navigate('/tests')}
+        testName={testName}
+        maxScore={maxScore}
+      />
     );
   }
 

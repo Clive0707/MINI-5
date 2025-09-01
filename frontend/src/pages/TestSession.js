@@ -8,11 +8,11 @@ const TestSession = () => {
   const renderTest = () => {
     switch (testType) {
       case 'word_recall':
-        return <WordRecallTest />;
+        return <WordRecallTest onTestComplete={(score) => console.log('Word recall test completed with score:', score)} />;
       case 'stroop':
-        return <StroopTest />;
+        return <StroopTest onTestComplete={(score) => console.log('Stroop test completed with score:', score)} />;
       case 'pattern_recognition':
-        return <PatternRecognitionTest />;
+        return <PatternRecognitionTest onTestComplete={(score) => console.log('Pattern recognition test completed with score:', score)} />;
       default:
         return <Navigate to="/tests" replace />;
     }

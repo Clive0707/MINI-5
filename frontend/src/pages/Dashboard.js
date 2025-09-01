@@ -12,11 +12,13 @@ import {
   ArrowRight,
   Activity,
   Target,
-  Award
+  Award,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import notificationService from '../services/notificationService';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -34,12 +36,58 @@ const Dashboard = () => {
     fetchDashboardData();
   }, []);
 
+  // Refresh dashboard when component becomes visible (e.g., returning from test)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (!document.hidden) {
+        fetchDashboardData();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
+
+  // Subscribe to notifications for dashboard refresh
+  useEffect(() => {
+    const unsubscribe = notificationService.subscribe((type, message, data) => {
+      try {
+        if (type === 'DASHBOARD_REFRESH' || type === 'TEST_COMPLETED') {
+          console.log('🔄 Dashboard refresh triggered by notification:', type, data);
+          fetchDashboardData();
+        }
+      } catch (error) {
+        console.error('Error handling notification:', error);
+      }
+    });
+
+    return unsubscribe;
+  }, []);
+
   const fetchDashboardData = async () => {
     try {
       const response = await api.get('/users/dashboard');
       console.log('Dashboard response:', response.data);
+      
       if (response.data && response.data.dashboard) {
-        setDashboardData(response.data.dashboard);
+        // Validate and sanitize dashboard data
+        const dashboard = response.data.dashboard;
+        const sanitizedData = {
+          user_profile: dashboard.user_profile || { name: '', age: 0, gender: '' },
+          risk_assessment: dashboard.risk_assessment || null,
+          test_summary: dashboard.test_summary || { total_tests: 0, average_performance: 0, last_test_date: null },
+          recent_tests: Array.isArray(dashboard.recent_tests) ? dashboard.recent_tests : [],
+          next_scheduled_test: dashboard.next_scheduled_test || null,
+          last_updated: dashboard.last_updated || null
+        };
+        
+        // Ensure recent_tests have percentage calculated
+        sanitizedData.recent_tests = sanitizedData.recent_tests.map(test => ({
+          ...test,
+          percentage: test.percentage || Math.round((test.score / test.max_score) * 100)
+        }));
+        
+        setDashboardData(sanitizedData);
       } else {
         console.error('Invalid dashboard data structure:', response.data);
         setDashboardData({
@@ -100,13 +148,23 @@ const Dashboard = () => {
     <div className="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-accent-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Welcome Header */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-display font-bold text-gray-900 mb-2">
-            Welcome back, {dashboardData.user_profile?.name || user?.first_name || 'User'}! 👋
-          </h1>
-          <p className="text-xl text-gray-600">
-            Here's your cognitive health overview for today
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-4xl font-display font-bold text-gray-900 mb-2">
+              Welcome back, {dashboardData.user_profile?.name || user?.first_name || 'User'}! 👋
+            </h1>
+            <p className="text-xl text-gray-600">
+              Here's your cognitive health overview for today
+            </p>
+          </div>
+          <button
+            onClick={fetchDashboardData}
+            disabled={loading}
+            className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50"
+          >
+            <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
         </div>
 
         {/* Quick Actions */}
@@ -171,8 +229,8 @@ const Dashboard = () => {
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
                     <AreaChart data={dashboardData.recent_tests.map(test => ({
-                      date: new Date(test.completed_at).toLocaleDateString(),
-                      score: test.percentage
+                      date: test.completed_at ? new Date(test.completed_at).toLocaleDateString() : 'Unknown',
+                      score: test.percentage || 0
                     }))}>
                       <defs>
                         <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
@@ -229,10 +287,10 @@ const Dashboard = () => {
                         </div>
                         <div>
                           <p className="font-medium text-gray-900 capitalize">
-                            {test.test_type.replace('_', ' ')} Test
+                            {test.test_type ? test.test_type.replace('_', ' ') : 'Cognitive'} Test
                           </p>
                           <p className="text-sm text-gray-500">
-                            {new Date(test.completed_at).toLocaleDateString()}
+                            {test.completed_at ? new Date(test.completed_at).toLocaleDateString() : 'Unknown'}
                           </p>
                         </div>
                       </div>
@@ -271,12 +329,12 @@ const Dashboard = () => {
               
               {dashboardData.risk_assessment ? (
                 <div className="text-center">
-                  <div className={`text-3xl font-bold mb-2 text-${getRiskColor(dashboardData.risk_assessment.category)}-600`}>
-                    {dashboardData.risk_assessment.category}
-                  </div>
-                  <div className="text-sm text-gray-500 mb-4">
-                    Risk Score: {dashboardData.risk_assessment.score || 'N/A'}
-                  </div>
+                                <div className={`text-3xl font-bold mb-2 text-${getRiskColor(dashboardData.risk_assessment.category)}-600`}>
+                {dashboardData.risk_assessment.category || 'Unknown'}
+              </div>
+              <div className="text-sm text-gray-500 mb-4">
+                Risk Score: {dashboardData.risk_assessment.score || 'N/A'}
+              </div>
                   <Link 
                     to="/risk-evaluation" 
                     className="inline-flex items-center text-primary-600 hover:text-primary-700 text-sm font-medium"
@@ -311,10 +369,10 @@ const Dashboard = () => {
                     <Brain className="w-8 h-8 text-primary-600" />
                   </div>
                   <h4 className="font-medium text-gray-900 mb-2 capitalize">
-                    {dashboardData.next_scheduled_test.test_type.replace('_', ' ')} Test
+                    {dashboardData.next_scheduled_test.test_type ? dashboardData.next_scheduled_test.test_type.replace('_', ' ') : 'Cognitive'} Test
                   </h4>
                   <p className="text-sm text-gray-500 mb-4">
-                    {new Date(dashboardData.next_scheduled_test.scheduled_date).toLocaleDateString()}
+                    {dashboardData.next_scheduled_test.scheduled_date ? new Date(dashboardData.next_scheduled_test.scheduled_date).toLocaleDateString() : 'Unknown'}
                   </p>
                   <Link 
                     to="/tests" 

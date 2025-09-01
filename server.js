@@ -8,8 +8,8 @@ const jwt = require('jsonwebtoken');
 const jsPDF = require('jspdf');
 require('dotenv').config();
 
-// Initialize notification service
-require('./services/notificationService');
+// Initialize notification service for email notifications
+// require('./services/notificationService'); // Temporarily disabled to avoid conflicts
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -299,10 +299,10 @@ app.get('/api/users/dashboard', authenticateToken, (req, res) => {
         return res.status(500).json({ error: 'Database error' });
       }
 
-      if (!userProfile) {
-        console.error('❌ User profile not found for ID:', req.user.userId);
-        return res.status(404).json({ error: 'User profile not found' });
-      }
+              if (!userProfile) {
+          console.error('❌ User profile not found for ID:', req.user.userId);
+          return res.status(404).json({ error: 'User profile not found' });
+        }
 
       console.log('✅ User profile found:', userProfile.first_name, userProfile.last_name);
 
@@ -403,6 +403,13 @@ app.get('/api/users/dashboard', authenticateToken, (req, res) => {
 // Submit cognitive test result
 app.post('/api/tests/submit', authenticateToken, (req, res) => {
   try {
+    console.log('📝 Test submission received:', { 
+      test_type: req.body?.test_type, 
+      score: req.body?.score, 
+      max_score: req.body?.max_score,
+      user_id: req.user.userId
+    });
+
     const { test_type, score, max_score, time_taken, test_data } = req.body;
 
     if (!test_type || score === undefined || !max_score) {
@@ -413,31 +420,63 @@ app.post('/api/tests/submit', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'Invalid score value' });
     }
 
+
+
     const db = getDatabase();
+    const completionDate = new Date().toISOString();
+    const percentage = Math.round((score / max_score) * 100);
 
     db.run(`
-      INSERT INTO cognitive_tests (user_id, test_type, score, max_score, time_taken, test_data)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `, [req.user.userId, test_type, score, max_score, time_taken || null, JSON.stringify(test_data) || null], function(err) {
-              if (err) {
-          return res.status(500).json({ error: 'Failed to save test result' });
-        }
+      INSERT INTO cognitive_tests (user_id, test_type, score, max_score, time_taken, test_data, completed_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `, [req.user.userId, test_type, score, max_score, time_taken || null, JSON.stringify(test_data) || null, completionDate], function(err) {
+      if (err) {
+        console.error('❌ Failed to save test result:', err);
+        return res.status(500).json({ error: 'Failed to save test result' });
+      }
 
-        const testId = this.lastID;
+      const testId = this.lastID;
+      console.log('✅ Test result saved successfully:', { test_id: testId, user_id: userId, percentage });
 
-        res.status(201).json({
+      // Return comprehensive test result data
+      res.status(201).json({
         message: 'Test result saved successfully',
-        test_id: testId,
-        score,
-        max_score,
-        percentage: Math.round((score / max_score) * 100)
+        test_result: {
+          id: testId,
+          test_type,
+          score,
+          max_score,
+          percentage,
+          time_taken: time_taken || null,
+          completion_date: completionDate,
+          user_id: req.user.userId
+        },
+        performance_feedback: getPerformanceFeedback(percentage),
+        next_steps: getNextSteps(percentage)
       });
     });
   } catch (error) {
-    console.error('Test submission error:', error);
+    console.error('❌ Test submission error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
+
+// Helper function to get performance feedback
+function getPerformanceFeedback(percentage) {
+  if (percentage >= 90) return { level: 'Excellent', message: 'Outstanding cognitive performance!', color: 'success' };
+  if (percentage >= 80) return { level: 'Great', message: 'Strong cognitive abilities demonstrated.', color: 'success' };
+  if (percentage >= 70) return { level: 'Good', message: 'Above average performance.', color: 'warning' };
+  if (percentage >= 60) return { level: 'Fair', message: 'Average performance with room for improvement.', color: 'warning' };
+  if (percentage >= 50) return { level: 'Below Average', message: 'Below average performance. Consider retaking.', color: 'danger' };
+  return { level: 'Poor', message: 'Poor performance. Please retake the test.', color: 'danger' };
+}
+
+// Helper function to get next steps
+function getNextSteps(percentage) {
+  if (percentage >= 80) return ['Continue regular testing', 'Maintain healthy lifestyle', 'Consider advanced tests'];
+  if (percentage >= 60) return ['Practice similar tests', 'Focus on weak areas', 'Retake in 1-2 weeks'];
+  return ['Retake the test', 'Consult healthcare provider', 'Focus on cognitive exercises'];
+}
 
 // Get user's test history
 app.get('/api/tests/history', authenticateToken, (req, res) => {
@@ -475,6 +514,45 @@ app.get('/api/tests/history', authenticateToken, (req, res) => {
     });
   } catch (error) {
     console.error('Test history fetch error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get specific test result
+app.get('/api/tests/result/:testId', authenticateToken, (req, res) => {
+  try {
+    const { testId } = req.params;
+    const db = getDatabase();
+
+    db.get(`
+      SELECT id, test_type, score, max_score, time_taken, completed_at, test_data
+      FROM cognitive_tests 
+      WHERE id = ? AND user_id = ?
+    `, [testId, req.user.userId], (err, test) => {
+      if (err) {
+        console.error('❌ Test result fetch error:', err);
+        return res.status(500).json({ error: 'Database error' });
+      }
+
+      if (!test) {
+        return res.status(404).json({ error: 'Test result not found' });
+      }
+
+      const percentage = Math.round((test.score / test.max_score) * 100);
+      const performanceFeedback = getPerformanceFeedback(percentage);
+      const nextSteps = getNextSteps(percentage);
+
+      res.json({
+        test_result: {
+          ...test,
+          percentage,
+          performance_feedback: performanceFeedback,
+          next_steps: nextSteps
+        }
+      });
+    });
+  } catch (error) {
+    console.error('❌ Test result fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
