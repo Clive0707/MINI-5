@@ -21,11 +21,12 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 const Dashboard = () => {
   const { user } = useAuth();
   const [dashboardData, setDashboardData] = useState({
-    recentTests: [],
-    nextScheduledTest: null,
-    riskScore: null,
-    performanceTrend: [],
-    upcomingTests: []
+    user_profile: { name: '', age: 0, gender: '' },
+    risk_assessment: null,
+    test_summary: { total_tests: 0, average_performance: 0, last_test_date: null },
+    recent_tests: [],
+    next_scheduled_test: null,
+    last_updated: null
   });
   const [loading, setLoading] = useState(true);
 
@@ -36,9 +37,31 @@ const Dashboard = () => {
   const fetchDashboardData = async () => {
     try {
       const response = await api.get('/users/dashboard');
-      setDashboardData(response.data);
+      console.log('Dashboard response:', response.data);
+      if (response.data && response.data.dashboard) {
+        setDashboardData(response.data.dashboard);
+      } else {
+        console.error('Invalid dashboard data structure:', response.data);
+        setDashboardData({
+          user_profile: { name: '', age: 0, gender: '' },
+          risk_assessment: null,
+          test_summary: { total_tests: 0, average_performance: 0, last_test_date: null },
+          recent_tests: [],
+          next_scheduled_test: null,
+          last_updated: null
+        });
+      }
     } catch (error) {
       console.error('Error fetching dashboard data:', error);
+      // Set default data on error
+      setDashboardData({
+        user_profile: { name: '', age: 0, gender: '' },
+        risk_assessment: null,
+        test_summary: { total_tests: 0, average_performance: 0, last_test_date: null },
+        recent_tests: [],
+        next_scheduled_test: null,
+        last_updated: null
+      });
     } finally {
       setLoading(false);
     }
@@ -79,7 +102,7 @@ const Dashboard = () => {
         {/* Welcome Header */}
         <div className="mb-8">
           <h1 className="text-4xl font-display font-bold text-gray-900 mb-2">
-            Welcome back, {user?.username || 'User'}! 👋
+            Welcome back, {dashboardData.user_profile?.name || user?.first_name || 'User'}! 👋
           </h1>
           <p className="text-xl text-gray-600">
             Here's your cognitive health overview for today
@@ -144,10 +167,13 @@ const Dashboard = () => {
                 </Link>
               </div>
               
-              {dashboardData.performanceTrend.length > 0 ? (
+              {dashboardData.recent_tests && dashboardData.recent_tests.length > 0 ? (
                 <div className="h-64">
                   <ResponsiveContainer width="100%" height="100%">
-                    <AreaChart data={dashboardData.performanceTrend}>
+                    <AreaChart data={dashboardData.recent_tests.map(test => ({
+                      date: new Date(test.completed_at).toLocaleDateString(),
+                      score: test.percentage
+                    }))}>
                       <defs>
                         <linearGradient id="colorScore" x1="0" y1="0" x2="0" y2="1">
                           <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.3}/>
@@ -193,9 +219,9 @@ const Dashboard = () => {
                 </Link>
               </div>
               
-              {dashboardData.recentTests.length > 0 ? (
+              {dashboardData.recent_tests && dashboardData.recent_tests.length > 0 ? (
                 <div className="space-y-4">
-                  {dashboardData.recentTests.slice(0, 3).map((test, index) => (
+                  {dashboardData.recent_tests.slice(0, 3).map((test, index) => (
                     <div key={index} className="flex items-center justify-between p-4 bg-gray-50 rounded-2xl">
                       <div className="flex items-center space-x-4">
                         <div className="w-10 h-10 bg-primary-100 rounded-xl flex items-center justify-center">
@@ -212,7 +238,7 @@ const Dashboard = () => {
                       </div>
                       <div className="text-right">
                         <div className="text-2xl font-bold text-primary-600">
-                          {test.score}/10
+                          {test.percentage}%
                         </div>
                         <div className="text-sm text-gray-500">Score</div>
                       </div>
@@ -240,16 +266,16 @@ const Dashboard = () => {
             <div className="bg-white rounded-3xl p-6 shadow-soft">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-lg font-semibold text-gray-900">Risk Assessment</h3>
-                {getRiskIcon(dashboardData.riskScore?.risk_category)}
+                {getRiskIcon(dashboardData.risk_assessment?.category)}
               </div>
               
-              {dashboardData.riskScore ? (
+              {dashboardData.risk_assessment ? (
                 <div className="text-center">
-                  <div className={`text-3xl font-bold mb-2 text-${getRiskColor(dashboardData.riskScore.risk_category)}-600`}>
-                    {dashboardData.riskScore.risk_category}
+                  <div className={`text-3xl font-bold mb-2 text-${getRiskColor(dashboardData.risk_assessment.category)}-600`}>
+                    {dashboardData.risk_assessment.category}
                   </div>
                   <div className="text-sm text-gray-500 mb-4">
-                    Risk Score: {dashboardData.riskScore.risk_score || 'N/A'}
+                    Risk Score: {dashboardData.risk_assessment.score || 'N/A'}
                   </div>
                   <Link 
                     to="/risk-evaluation" 
@@ -279,16 +305,16 @@ const Dashboard = () => {
                 <Calendar className="w-5 h-5 text-gray-400" />
               </div>
               
-              {dashboardData.nextScheduledTest ? (
+              {dashboardData.next_scheduled_test ? (
                 <div className="text-center">
                   <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                     <Brain className="w-8 h-8 text-primary-600" />
                   </div>
                   <h4 className="font-medium text-gray-900 mb-2 capitalize">
-                    {dashboardData.nextScheduledTest.test_type.replace('_', ' ')} Test
+                    {dashboardData.next_scheduled_test.test_type.replace('_', ' ')} Test
                   </h4>
                   <p className="text-sm text-gray-500 mb-4">
-                    {new Date(dashboardData.nextScheduledTest.scheduled_date).toLocaleDateString()}
+                    {new Date(dashboardData.next_scheduled_test.scheduled_date).toLocaleDateString()}
                   </p>
                   <Link 
                     to="/tests" 
@@ -317,15 +343,12 @@ const Dashboard = () => {
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Tests Completed</span>
-                  <span className="font-semibold text-gray-900">{dashboardData.recentTests.length}</span>
+                  <span className="font-semibold text-gray-900">{dashboardData.test_summary.total_tests}</span>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Average Score</span>
                   <span className="font-semibold text-gray-900">
-                    {dashboardData.recentTests.length > 0 
-                      ? (dashboardData.recentTests.reduce((sum, test) => sum + test.score, 0) / dashboardData.recentTests.length).toFixed(1)
-                      : 'N/A'
-                    }
+                    {dashboardData.test_summary.average_performance || 'N/A'}%
                   </span>
                 </div>
                 <div className="flex items-center justify-between">

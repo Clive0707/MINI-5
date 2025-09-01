@@ -47,6 +47,36 @@ app.use((req, res, next) => {
   next();
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  try {
+    const db = getDatabase();
+    db.get('SELECT 1 as test', (err, row) => {
+      if (err) {
+        console.error('❌ Health check database error:', err);
+        return res.status(500).json({ 
+          status: 'error', 
+          message: 'Database connection failed',
+          error: err.message 
+        });
+      }
+      res.json({ 
+        status: 'healthy', 
+        message: 'Server and database are running',
+        timestamp: new Date().toISOString(),
+        database: 'connected'
+      });
+    });
+  } catch (error) {
+    console.error('❌ Health check error:', error);
+    res.status(500).json({ 
+      status: 'error', 
+      message: 'Server error',
+      error: error.message 
+    });
+  }
+});
+
 // Database initialization
 const { initDatabase, getDatabase } = require('./database/init');
 
@@ -260,17 +290,23 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
 // Get user dashboard data
 app.get('/api/users/dashboard', authenticateToken, (req, res) => {
   try {
+    console.log('📊 Fetching dashboard data for user:', req.user.userId);
     const db = getDatabase();
 
     db.get('SELECT * FROM users WHERE id = ?', [req.user.userId], (err, userProfile) => {
       if (err) {
+        console.error('❌ Dashboard user profile error:', err);
         return res.status(500).json({ error: 'Database error' });
       }
 
       if (!userProfile) {
+        console.error('❌ User profile not found for ID:', req.user.userId);
         return res.status(404).json({ error: 'User profile not found' });
       }
 
+      console.log('✅ User profile found:', userProfile.first_name, userProfile.last_name);
+
+      // Get risk evaluation
       db.get(`
         SELECT risk_category, risk_score, evaluated_at
         FROM risk_evaluations 
@@ -279,9 +315,11 @@ app.get('/api/users/dashboard', authenticateToken, (req, res) => {
         LIMIT 1
       `, [req.user.userId], (err, latestRiskEval) => {
         if (err) {
+          console.error('❌ Dashboard risk evaluation error:', err);
           return res.status(500).json({ error: 'Database error' });
         }
 
+        // Get test statistics
         db.get(`
           SELECT 
             COUNT(*) as total_tests,
@@ -291,9 +329,11 @@ app.get('/api/users/dashboard', authenticateToken, (req, res) => {
           WHERE user_id = ?
         `, [req.user.userId], (err, testStats) => {
           if (err) {
+            console.error('❌ Dashboard test stats error:', err);
             return res.status(500).json({ error: 'Database error' });
           }
 
+          // Get recent tests
           db.all(`
             SELECT 
               test_type,
@@ -305,9 +345,11 @@ app.get('/api/users/dashboard', authenticateToken, (req, res) => {
             LIMIT 5
           `, [req.user.userId], (err, recentTests) => {
             if (err) {
+              console.error('❌ Dashboard recent tests error:', err);
               return res.status(500).json({ error: 'Database error' });
             }
 
+            // Get next scheduled test
             db.get(`
               SELECT test_type, scheduled_date
               FROM test_schedules 
@@ -318,6 +360,7 @@ app.get('/api/users/dashboard', authenticateToken, (req, res) => {
               LIMIT 1
             `, [req.user.userId], (err, nextScheduledTest) => {
               if (err) {
+                console.error('❌ Dashboard scheduled test error:', err);
                 return res.status(500).json({ error: 'Database error' });
               }
 
@@ -337,14 +380,12 @@ app.get('/api/users/dashboard', authenticateToken, (req, res) => {
                   average_performance: Math.round(testStats.average_percentage || 0),
                   last_test_date: testStats.last_test_date
                 },
-                recent_tests: recentTests.map(test => ({
-                  ...test,
-                  percentage: Math.round(test.percentage || 0)
-                })),
+                recent_tests: recentTests || [],
                 next_scheduled_test: nextScheduledTest,
                 last_updated: new Date().toISOString()
               };
               
+              console.log('✅ Dashboard data fetched successfully for user:', req.user.userId);
               res.json({ dashboard: dashboardData });
             });
           });
@@ -352,7 +393,7 @@ app.get('/api/users/dashboard', authenticateToken, (req, res) => {
       });
     });
   } catch (error) {
-    console.error('Dashboard fetch error:', error);
+    console.error('❌ Dashboard fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
