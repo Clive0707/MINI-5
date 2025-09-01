@@ -106,8 +106,19 @@ function initDatabase() {
 
 function getDatabase() {
   if (!db) {
+    console.log('🔄 Creating new database connection...');
     db = new sqlite3.Database(dbPath);
+    
+    db.on('error', (err) => {
+      console.error('❌ Database connection error:', err);
+      db = null;
+    });
+    
+    db.on('open', () => {
+      console.log('✅ Database connection opened and ready');
+    });
   }
+  
   return db;
 }
 

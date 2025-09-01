@@ -32,6 +32,21 @@ app.use('/api/', limiter);
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
+// Error handling for malformed JSON
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.log('⚠️ Malformed JSON received, ignoring request');
+    return res.status(400).json({ error: 'Invalid JSON format' });
+  }
+  next();
+});
+
+// Request logging middleware
+app.use((req, res, next) => {
+  console.log(`📥 ${req.method} ${req.path} - Body:`, req.body);
+  next();
+});
+
 // Database initialization
 const { initDatabase, getDatabase } = require('./database/init');
 
@@ -119,34 +134,53 @@ app.post('/api/auth/register', async (req, res) => {
 // Login user
 app.post('/api/auth/login', (req, res) => {
   try {
+    console.log('🔐 Login attempt received:', { email: req.body?.email, hasPassword: !!req.body?.password });
+    
     const { email, password } = req.body;
 
     if (!email || !password) {
+      console.log('❌ Login failed: Missing email or password');
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
     const db = getDatabase();
+    
+    if (!db) {
+      console.error('❌ Login failed: Database connection not available');
+      return res.status(500).json({ error: 'Database connection error' });
+    }
 
+    console.log('🔍 Querying database for user:', email);
+    
     db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
       if (err) {
+        console.error('❌ Database error during login:', err);
         return res.status(500).json({ error: 'Database error' });
       }
 
       if (!user) {
+        console.log('❌ Login failed: User not found:', email);
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
+      console.log('✅ User found, verifying password...');
+      
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
       if (!isValidPassword) {
+        console.log('❌ Login failed: Invalid password for user:', email);
         return res.status(401).json({ error: 'Invalid email or password' });
       }
 
+      console.log('✅ Password verified, generating token for user:', email);
+      
       const token = jwt.sign(
         { userId: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name },
         JWT_SECRET,
         { expiresIn: '7d' }
       );
 
+      console.log('✅ Login successful for user:', email);
+      
       res.json({
         message: 'Login successful',
         token,
@@ -157,7 +191,7 @@ app.post('/api/auth/login', (req, res) => {
       });
     });
   } catch (error) {
-    console.error('Login error:', error);
+    console.error('❌ Login error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -777,6 +811,17 @@ async function startServer() {
     const server = app.listen(PORT, () => {
       console.log(`🚀 Dementia Tracker API running on port ${PORT}`);
       console.log(`📊 Health check: http://localhost:${PORT}/api/health`);
+    });
+
+    // Prevent server crashes from unhandled errors
+    process.on('uncaughtException', (err) => {
+      console.error('❌ Uncaught Exception:', err);
+      console.log('🔄 Server will continue running...');
+    });
+
+    process.on('unhandledRejection', (reason, promise) => {
+      console.error('❌ Unhandled Rejection at:', promise, 'reason:', reason);
+      console.log('🔄 Server will continue running...');
     });
 
     // Graceful shutdown
