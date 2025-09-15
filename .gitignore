@@ -13,9 +13,6 @@ yarn-error.log*
 
 # Database files
 *.db
-*.sqlite
-*.sqlite3
-database/*.db
 
 # Build outputs
 frontend/build/

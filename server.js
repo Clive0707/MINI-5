@@ -6,6 +6,11 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const jsPDF = require('jspdf');
+const { connectMongo } = require('./database/mongo');
+const User = require('./database/models/User');
+const CognitiveTest = require('./database/models/CognitiveTest');
+const RiskEvaluation = require('./database/models/RiskEvaluation');
+const TestSchedule = require('./database/models/TestSchedule');
 require('dotenv').config();
 
 // Initialize notification service for email notifications
@@ -49,36 +54,14 @@ app.use((req, res, next) => {
 
 // Health check endpoint
 app.get('/api/health', (req, res) => {
-  try {
-    const db = getDatabase();
-    db.get('SELECT 1 as test', (err, row) => {
-      if (err) {
-        console.error('❌ Health check database error:', err);
-        return res.status(500).json({ 
-          status: 'error', 
-          message: 'Database connection failed',
-          error: err.message 
-        });
-      }
-      res.json({ 
-        status: 'healthy', 
-        message: 'Server and database are running',
-        timestamp: new Date().toISOString(),
-        database: 'connected'
-      });
-    });
-  } catch (error) {
-    console.error('❌ Health check error:', error);
-    res.status(500).json({ 
-      status: 'error', 
-      message: 'Server error',
-      error: error.message 
-    });
-  }
+  res.json({ 
+    status: 'healthy',
+    message: 'Server is running',
+    timestamp: new Date().toISOString()
+  });
 });
 
-// Database initialization
-const { initDatabase, getDatabase } = require('./database/init');
+// Database initialization (MongoDB)
 
 // JWT secret
 const JWT_SECRET = process.env.JWT_SECRET || 'dementia-tracker-secret-key';
@@ -120,40 +103,33 @@ app.post('/api/auth/register', async (req, res) => {
       return res.status(400).json({ error: 'Age must be between 18 and 120' });
     }
 
-    const db = getDatabase();
-    
-    db.get('SELECT id FROM users WHERE email = ?', [email], async (err, row) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
+    const existing = await User.findOne({ email }).lean();
+    if (existing) {
+      return res.status(409).json({ error: 'User with this email already exists' });
+    }
 
-      if (row) {
-        return res.status(409).json({ error: 'User with this email already exists' });
-      }
+    const passwordHash = await bcrypt.hash(password, 10);
+    const userDoc = await User.create({
+      email,
+      password_hash: passwordHash,
+      first_name,
+      last_name,
+      age,
+      gender,
+      family_history: family_history || '',
+      medical_conditions: medical_conditions || ''
+    });
 
-      const passwordHash = await bcrypt.hash(password, 10);
+    const token = jwt.sign(
+      { userId: userDoc._id.toString(), email, first_name, last_name },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
 
-      db.run(`
-        INSERT INTO users (email, password_hash, first_name, last_name, age, gender, family_history, medical_conditions)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-      `, [email, passwordHash, first_name, last_name, age, gender, family_history || '', medical_conditions || ''], function(err) {
-        if (err) {
-          return res.status(500).json({ error: 'Failed to create user' });
-        }
-
-        const userId = this.lastID;
-        const token = jwt.sign(
-          { userId, email, first_name, last_name },
-          JWT_SECRET,
-          { expiresIn: '7d' }
-        );
-
-        res.status(201).json({
-          message: 'User created successfully',
-          token,
-          user: { id: userId, email, first_name, last_name, age, gender, family_history, medical_conditions }
-        });
-      });
+    res.status(201).json({
+      message: 'User created successfully',
+      token,
+      user: { id: userDoc._id.toString(), email, first_name, last_name, age, gender, family_history, medical_conditions }
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -162,7 +138,7 @@ app.post('/api/auth/register', async (req, res) => {
 });
 
 // Login user
-app.post('/api/auth/login', (req, res) => {
+app.post('/api/auth/login', async (req, res) => {
   try {
     console.log('🔐 Login attempt received:', { email: req.body?.email, hasPassword: !!req.body?.password });
     
@@ -173,52 +149,36 @@ app.post('/api/auth/login', (req, res) => {
       return res.status(400).json({ error: 'Email and password are required' });
     }
 
-    const db = getDatabase();
-    
-    if (!db) {
-      console.error('❌ Login failed: Database connection not available');
-      return res.status(500).json({ error: 'Database connection error' });
+    console.log('🔍 Querying database for user:', email);
+    const user = await User.findOne({ email }).lean();
+
+    if (!user) {
+      console.log('❌ Login failed: User not found:', email);
+      return res.status(401).json({ error: 'Invalid email or password' });
     }
 
-    console.log('🔍 Querying database for user:', email);
-    
-    db.get('SELECT * FROM users WHERE email = ?', [email], async (err, user) => {
-      if (err) {
-        console.error('❌ Database error during login:', err);
-        return res.status(500).json({ error: 'Database error' });
+    console.log('✅ User found, verifying password...');
+    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    if (!isValidPassword) {
+      console.log('❌ Login failed: Invalid password for user:', email);
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    console.log('✅ Password verified, generating token for user:', email);
+    const token = jwt.sign(
+      { userId: user._id.toString(), email: user.email, first_name: user.first_name, last_name: user.last_name },
+      JWT_SECRET,
+      { expiresIn: '7d' }
+    );
+
+    console.log('✅ Login successful for user:', email);
+    res.json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id.toString(), email: user.email, first_name: user.first_name, last_name: user.last_name,
+        age: user.age, gender: user.gender, family_history: user.family_history, medical_conditions: user.medical_conditions
       }
-
-      if (!user) {
-        console.log('❌ Login failed: User not found:', email);
-        return res.status(401).json({ error: 'Invalid email or password' });
-      }
-
-      console.log('✅ User found, verifying password...');
-      
-      const isValidPassword = await bcrypt.compare(password, user.password_hash);
-      if (!isValidPassword) {
-        console.log('❌ Login failed: Invalid password for user:', email);
-        return res.status(401).json({ error: 'Invalid email or password' });
-      }
-
-      console.log('✅ Password verified, generating token for user:', email);
-      
-      const token = jwt.sign(
-        { userId: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name },
-        JWT_SECRET,
-        { expiresIn: '7d' }
-      );
-
-      console.log('✅ Login successful for user:', email);
-      
-      res.json({
-        message: 'Login successful',
-        token,
-        user: {
-          id: user.id, email: user.email, first_name: user.first_name, last_name: user.last_name,
-          age: user.age, gender: user.gender, family_history: user.family_history, medical_conditions: user.medical_conditions
-        }
-      });
     });
   } catch (error) {
     console.error('❌ Login error:', error);
@@ -227,22 +187,13 @@ app.post('/api/auth/login', (req, res) => {
 });
 
 // Get current user profile
-app.get('/api/auth/profile', authenticateToken, (req, res) => {
+app.get('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const db = getDatabase();
-
-    db.get('SELECT id, email, first_name, last_name, age, gender, family_history, medical_conditions, created_at FROM users WHERE id = ?', 
-      [req.user.userId], (err, user) => {
-        if (err) {
-          return res.status(500).json({ error: 'Database error' });
-        }
-
-        if (!user) {
-          return res.status(404).json({ error: 'User not found' });
-        }
-
-        res.json({ user });
-      });
+    const user = await User.findById(req.user.userId, 'email first_name last_name age gender family_history medical_conditions created_at').lean();
+    if (!user) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ user: { id: user._id.toString(), ...user } });
   } catch (error) {
     console.error('Profile fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -250,7 +201,7 @@ app.get('/api/auth/profile', authenticateToken, (req, res) => {
 });
 
 // Update user profile
-app.put('/api/auth/profile', authenticateToken, (req, res) => {
+app.put('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
     const { first_name, last_name, age, gender, family_history, medical_conditions } = req.body;
 
@@ -262,23 +213,15 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'Age must be between 18 and 120' });
     }
 
-    const db = getDatabase();
-
-    db.run(`
-      UPDATE users 
-      SET first_name = ?, last_name = ?, age = ?, gender = ?, family_history = ?, medical_conditions = ?, updated_at = CURRENT_TIMESTAMP
-      WHERE id = ?
-    `, [first_name, last_name, age, gender, family_history || '', medical_conditions || '', req.user.userId], function(err) {
-              if (err) {
-          return res.status(500).json({ error: 'Failed to update profile' });
-        }
-
-        if (this.changes === 0) {
-          return res.status(404).json({ error: 'User not found' });
-        }
-
-        res.json({ message: 'Profile updated successfully' });
-    });
+    const result = await User.findByIdAndUpdate(
+      req.user.userId,
+      { first_name, last_name, age, gender, family_history: family_history || '', medical_conditions: medical_conditions || '' },
+      { new: true }
+    ).lean();
+    if (!result) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+    res.json({ message: 'Profile updated successfully' });
   } catch (error) {
     console.error('Profile update error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -288,110 +231,76 @@ app.put('/api/auth/profile', authenticateToken, (req, res) => {
 // ===== USER ROUTES =====
 
 // Get user dashboard data
-app.get('/api/users/dashboard', authenticateToken, (req, res) => {
+app.get('/api/users/dashboard', authenticateToken, async (req, res) => {
   try {
     console.log('📊 Fetching dashboard data for user:', req.user.userId);
-    const db = getDatabase();
 
-    db.get('SELECT * FROM users WHERE id = ?', [req.user.userId], (err, userProfile) => {
-      if (err) {
-        console.error('❌ Dashboard user profile error:', err);
-        return res.status(500).json({ error: 'Database error' });
+    const userProfile = await User.findById(req.user.userId).lean();
+    if (!userProfile) {
+      console.error('❌ User profile not found for ID:', req.user.userId);
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    console.log('✅ User profile found:', userProfile.first_name, userProfile.last_name);
+
+    const latestRiskEval = await RiskEvaluation.findOne({ user_id: req.user.userId })
+      .select('risk_category risk_score evaluated_at')
+      .sort({ evaluated_at: -1 })
+      .lean();
+
+    const agg = await CognitiveTest.aggregate([
+      { $match: { user_id: new (require('mongoose').Types.ObjectId)(req.user.userId) } },
+      { $group: {
+          _id: null,
+          total_tests: { $sum: 1 },
+          average_percentage: { $avg: { $multiply: [{ $divide: ['$score', '$max_score'] }, 100] } },
+          last_test_date: { $max: '$completed_at' }
+        }
       }
+    ]);
+    const testStats = agg[0] || { total_tests: 0, average_percentage: 0, last_test_date: null };
 
-              if (!userProfile) {
-          console.error('❌ User profile not found for ID:', req.user.userId);
-          return res.status(404).json({ error: 'User profile not found' });
-        }
+    const recentDocs = await CognitiveTest.find({ user_id: req.user.userId })
+      .select('test_type score max_score completed_at')
+      .sort({ completed_at: -1 })
+      .limit(5)
+      .lean();
+    const recentTests = recentDocs.map(doc => ({
+      test_type: doc.test_type,
+      percentage: Math.round((doc.score * 100.0) / doc.max_score),
+      completed_at: doc.completed_at
+    }));
 
-      console.log('✅ User profile found:', userProfile.first_name, userProfile.last_name);
+    const today = new Date();
+    const nextScheduledTest = await TestSchedule.findOne({
+      user_id: req.user.userId,
+      status: 'scheduled',
+      scheduled_date: { $gte: new Date(today.toDateString()) }
+    }).select('test_type scheduled_date').sort({ scheduled_date: 1 }).lean();
 
-      // Get risk evaluation
-      db.get(`
-        SELECT risk_category, risk_score, evaluated_at
-        FROM risk_evaluations 
-        WHERE user_id = ? 
-        ORDER BY evaluated_at DESC 
-        LIMIT 1
-      `, [req.user.userId], (err, latestRiskEval) => {
-        if (err) {
-          console.error('❌ Dashboard risk evaluation error:', err);
-          return res.status(500).json({ error: 'Database error' });
-        }
+    const dashboardData = {
+      user_profile: {
+        name: `${userProfile.first_name} ${userProfile.last_name}`,
+        age: userProfile.age,
+        gender: userProfile.gender
+      },
+      risk_assessment: latestRiskEval ? {
+        category: latestRiskEval.risk_category,
+        score: latestRiskEval.risk_score,
+        date: latestRiskEval.evaluated_at
+      } : null,
+      test_summary: {
+        total_tests: testStats.total_tests || 0,
+        average_performance: Math.round(testStats.average_percentage || 0),
+        last_test_date: testStats.last_test_date || null
+      },
+      recent_tests: recentTests,
+      next_scheduled_test: nextScheduledTest,
+      last_updated: new Date().toISOString()
+    };
 
-        // Get test statistics
-        db.get(`
-          SELECT 
-            COUNT(*) as total_tests,
-            AVG(score * 100.0 / max_score) as average_percentage,
-            MAX(completed_at) as last_test_date
-          FROM cognitive_tests 
-          WHERE user_id = ?
-        `, [req.user.userId], (err, testStats) => {
-          if (err) {
-            console.error('❌ Dashboard test stats error:', err);
-            return res.status(500).json({ error: 'Database error' });
-          }
-
-          // Get recent tests
-          db.all(`
-            SELECT 
-              test_type,
-              (score * 100.0 / max_score) as percentage,
-              completed_at
-            FROM cognitive_tests 
-            WHERE user_id = ? 
-            ORDER BY completed_at DESC 
-            LIMIT 5
-          `, [req.user.userId], (err, recentTests) => {
-            if (err) {
-              console.error('❌ Dashboard recent tests error:', err);
-              return res.status(500).json({ error: 'Database error' });
-            }
-
-            // Get next scheduled test
-            db.get(`
-              SELECT test_type, scheduled_date
-              FROM test_schedules 
-              WHERE user_id = ? 
-              AND status = 'scheduled' 
-              AND scheduled_date >= DATE('now')
-              ORDER BY scheduled_date ASC 
-              LIMIT 1
-            `, [req.user.userId], (err, nextScheduledTest) => {
-              if (err) {
-                console.error('❌ Dashboard scheduled test error:', err);
-                return res.status(500).json({ error: 'Database error' });
-              }
-
-              const dashboardData = {
-                user_profile: {
-                  name: `${userProfile.first_name} ${userProfile.last_name}`,
-                  age: userProfile.age,
-                  gender: userProfile.gender
-                },
-                risk_assessment: latestRiskEval ? {
-                  category: latestRiskEval.risk_category,
-                  score: latestRiskEval.risk_score,
-                  date: latestRiskEval.evaluated_at
-                } : null,
-                test_summary: {
-                  total_tests: testStats.total_tests || 0,
-                  average_performance: Math.round(testStats.average_percentage || 0),
-                  last_test_date: testStats.last_test_date
-                },
-                recent_tests: recentTests || [],
-                next_scheduled_test: nextScheduledTest,
-                last_updated: new Date().toISOString()
-              };
-              
-              console.log('✅ Dashboard data fetched successfully for user:', req.user.userId);
-              res.json({ dashboard: dashboardData });
-            });
-          });
-        });
-      });
-    });
+    console.log('✅ Dashboard data fetched successfully for user:', req.user.userId);
+    res.json({ dashboard: dashboardData });
   } catch (error) {
     console.error('❌ Dashboard fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -401,7 +310,7 @@ app.get('/api/users/dashboard', authenticateToken, (req, res) => {
 // ===== TEST ROUTES =====
 
 // Submit cognitive test result
-app.post('/api/tests/submit', authenticateToken, (req, res) => {
+app.post('/api/tests/submit', authenticateToken, async (req, res) => {
   try {
     console.log('📝 Test submission received:', { 
       test_type: req.body?.test_type, 
@@ -420,40 +329,34 @@ app.post('/api/tests/submit', authenticateToken, (req, res) => {
       return res.status(400).json({ error: 'Invalid score value' });
     }
 
-
-
-    const db = getDatabase();
     const completionDate = new Date().toISOString();
     const percentage = Math.round((score / max_score) * 100);
+    const created = await CognitiveTest.create({
+      user_id: req.user.userId,
+      test_type,
+      score,
+      max_score,
+      time_taken: time_taken || null,
+      test_data: test_data || null,
+      completed_at: new Date(completionDate)
+    });
 
-    db.run(`
-      INSERT INTO cognitive_tests (user_id, test_type, score, max_score, time_taken, test_data, completed_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `, [req.user.userId, test_type, score, max_score, time_taken || null, JSON.stringify(test_data) || null, completionDate], function(err) {
-      if (err) {
-        console.error('❌ Failed to save test result:', err);
-        return res.status(500).json({ error: 'Failed to save test result' });
-      }
+    console.log('✅ Test result saved successfully:', { test_id: created._id.toString(), user_id: req.user.userId, percentage });
 
-      const testId = this.lastID;
-      console.log('✅ Test result saved successfully:', { test_id: testId, user_id: userId, percentage });
-
-      // Return comprehensive test result data
-      res.status(201).json({
-        message: 'Test result saved successfully',
-        test_result: {
-          id: testId,
-          test_type,
-          score,
-          max_score,
-          percentage,
-          time_taken: time_taken || null,
-          completion_date: completionDate,
-          user_id: req.user.userId
-        },
-        performance_feedback: getPerformanceFeedback(percentage),
-        next_steps: getNextSteps(percentage)
-      });
+    res.status(201).json({
+      message: 'Test result saved successfully',
+      test_result: {
+        id: created._id.toString(),
+        test_type,
+        score,
+        max_score,
+        percentage,
+        time_taken: time_taken || null,
+        completion_date: completionDate,
+        user_id: req.user.userId
+      },
+      performance_feedback: getPerformanceFeedback(percentage),
+      next_steps: getNextSteps(percentage)
     });
   } catch (error) {
     console.error('❌ Test submission error:', error);
@@ -479,39 +382,30 @@ function getNextSteps(percentage) {
 }
 
 // Get user's test history
-app.get('/api/tests/history', authenticateToken, (req, res) => {
+app.get('/api/tests/history', authenticateToken, async (req, res) => {
   try {
     const { limit = 50, offset = 0, test_type } = req.query;
-    const db = getDatabase();
+    const filter = { user_id: req.user.userId };
+    if (test_type) filter.test_type = test_type;
+    const tests = await CognitiveTest.find(filter)
+      .select('test_type score max_score time_taken completed_at')
+      .sort({ completed_at: -1 })
+      .skip(parseInt(offset))
+      .limit(parseInt(limit))
+      .lean();
 
-    let query = `
-      SELECT id, test_type, score, max_score, time_taken, completed_at
-      FROM cognitive_tests 
-      WHERE user_id = ?
-    `;
-    let params = [req.user.userId];
+    const testsWithMetrics = tests.map(test => ({
+      id: test._id.toString(),
+      test_type: test.test_type,
+      score: test.score,
+      max_score: test.max_score,
+      time_taken: test.time_taken,
+      completed_at: test.completed_at,
+      percentage: Math.round((test.score / test.max_score) * 100),
+      score_percentage: (test.score / test.max_score) * 100
+    }));
 
-    if (test_type) {
-      query += ' AND test_type = ?';
-      params.push(test_type);
-    }
-
-    query += ' ORDER BY completed_at DESC LIMIT ? OFFSET ?';
-    params.push(parseInt(limit), parseInt(offset));
-
-    db.all(query, params, (err, tests) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
-
-      const testsWithMetrics = tests.map(test => ({
-        ...test,
-        percentage: Math.round((test.score / test.max_score) * 100),
-        score_percentage: (test.score / test.max_score) * 100
-      }));
-
-      res.json({ tests: testsWithMetrics });
-    });
+    res.json({ tests: testsWithMetrics });
   } catch (error) {
     console.error('Test history fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -519,37 +413,34 @@ app.get('/api/tests/history', authenticateToken, (req, res) => {
 });
 
 // Get specific test result
-app.get('/api/tests/result/:testId', authenticateToken, (req, res) => {
+app.get('/api/tests/result/:testId', authenticateToken, async (req, res) => {
   try {
     const { testId } = req.params;
-    const db = getDatabase();
+    const test = await CognitiveTest.findOne({ _id: testId, user_id: req.user.userId })
+      .select('test_type score max_score time_taken completed_at test_data')
+      .lean();
 
-    db.get(`
-      SELECT id, test_type, score, max_score, time_taken, completed_at, test_data
-      FROM cognitive_tests 
-      WHERE id = ? AND user_id = ?
-    `, [testId, req.user.userId], (err, test) => {
-      if (err) {
-        console.error('❌ Test result fetch error:', err);
-        return res.status(500).json({ error: 'Database error' });
+    if (!test) {
+      return res.status(404).json({ error: 'Test result not found' });
+    }
+
+    const percentage = Math.round((test.score / test.max_score) * 100);
+    const performanceFeedback = getPerformanceFeedback(percentage);
+    const nextSteps = getNextSteps(percentage);
+
+    res.json({
+      test_result: {
+        id: test._id.toString(),
+        test_type: test.test_type,
+        score: test.score,
+        max_score: test.max_score,
+        time_taken: test.time_taken,
+        completed_at: test.completed_at,
+        test_data: test.test_data,
+        percentage,
+        performance_feedback: performanceFeedback,
+        next_steps: nextSteps
       }
-
-      if (!test) {
-        return res.status(404).json({ error: 'Test result not found' });
-      }
-
-      const percentage = Math.round((test.score / test.max_score) * 100);
-      const performanceFeedback = getPerformanceFeedback(percentage);
-      const nextSteps = getNextSteps(percentage);
-
-      res.json({
-        test_result: {
-          ...test,
-          percentage,
-          performance_feedback: performanceFeedback,
-          next_steps: nextSteps
-        }
-      });
     });
   } catch (error) {
     console.error('❌ Test result fetch error:', error);
@@ -641,68 +532,54 @@ function calculateRiskScore(userProfile, cognitiveScores, lifestyleFactors) {
 }
 
 // Submit risk evaluation
-app.post('/api/evaluation/evaluate', authenticateToken, (req, res) => {
+app.post('/api/evaluation/evaluate', authenticateToken, async (req, res) => {
   try {
     const { lifestyle_factors } = req.body;
-    const db = getDatabase();
+    const userProfile = await User.findById(req.user.userId).lean();
+    if (!userProfile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
 
-    db.get('SELECT * FROM users WHERE id = ?', [req.user.userId], (err, userProfile) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
+    const sinceDate = new Date();
+    sinceDate.setMonth(sinceDate.getMonth() - 3);
+    const cognitiveDocs = await CognitiveTest.find({ user_id: req.user.userId, completed_at: { $gte: sinceDate } })
+      .select('test_type score max_score completed_at')
+      .sort({ completed_at: -1 })
+      .lean();
+    const cognitiveScores = cognitiveDocs.map(doc => ({
+      test_type: doc.test_type,
+      score: doc.score,
+      max_score: doc.max_score,
+      percentage: (doc.score * 100.0) / doc.max_score
+    }));
+
+    const riskAssessment = calculateRiskScore(userProfile, cognitiveScores, lifestyle_factors);
+
+    const created = await RiskEvaluation.create({
+      user_id: req.user.userId,
+      risk_category: riskAssessment.riskCategory,
+      risk_score: riskAssessment.riskScore,
+      factors: riskAssessment.factors,
+      recommendations: riskAssessment.recommendations,
+      evaluated_at: new Date()
+    });
+
+    res.status(201).json({
+      message: 'Risk evaluation completed successfully',
+      evaluation_id: created._id.toString(),
+      risk_assessment: riskAssessment,
+      user_profile: {
+        age: userProfile.age,
+        gender: userProfile.gender,
+        family_history: userProfile.family_history,
+        medical_conditions: userProfile.medical_conditions
+      },
+      cognitive_summary: {
+        total_tests: cognitiveScores.length,
+        average_score: cognitiveScores.length > 0 
+          ? Math.round(cognitiveScores.reduce((sum, test) => sum + test.percentage, 0) / cognitiveScores.length)
+          : 0
       }
-
-      if (!userProfile) {
-        return res.status(404).json({ error: 'User profile not found' });
-      }
-
-      db.all(`
-        SELECT test_type, score, max_score, (score * 100.0 / max_score) as percentage
-        FROM cognitive_tests 
-        WHERE user_id = ? 
-        AND completed_at >= datetime('now', '-3 months')
-        ORDER BY completed_at DESC
-      `, [req.user.userId], (err, cognitiveScores) => {
-        if (err) {
-          return res.status(500).json({ error: 'Database error' });
-        }
-
-        const riskAssessment = calculateRiskScore(userProfile, cognitiveScores, lifestyle_factors);
-
-        db.run(`
-          INSERT INTO risk_evaluations (user_id, risk_category, risk_score, factors, recommendations)
-          VALUES (?, ?, ?, ?, ?)
-        `, [
-          req.user.userId,
-          riskAssessment.riskCategory,
-          riskAssessment.riskScore,
-          JSON.stringify(riskAssessment.factors),
-          JSON.stringify(riskAssessment.recommendations)
-        ], function(err) {
-          if (err) {
-            return res.status(500).json({ error: 'Failed to save risk evaluation' });
-          }
-
-          const evaluationId = this.lastID;
-
-          res.status(201).json({
-            message: 'Risk evaluation completed successfully',
-            evaluation_id: evaluationId,
-            risk_assessment: riskAssessment,
-            user_profile: {
-              age: userProfile.age,
-              gender: userProfile.gender,
-              family_history: userProfile.family_history,
-              medical_conditions: userProfile.medical_conditions
-            },
-            cognitive_summary: {
-              total_tests: cognitiveScores.length,
-              average_score: cognitiveScores.length > 0 
-                ? Math.round(cognitiveScores.reduce((sum, test) => sum + test.percentage, 0) / cognitiveScores.length)
-                : 0
-            }
-          });
-        });
-      });
     });
   } catch (error) {
     console.error('Risk evaluation error:', error);
@@ -715,64 +592,49 @@ app.post('/api/evaluation/evaluate', authenticateToken, (req, res) => {
 // Generate comprehensive PDF report
 app.get('/api/reports/generate', authenticateToken, async (req, res) => {
   try {
-    const db = getDatabase();
-    
-    db.get('SELECT * FROM users WHERE id = ?', [req.user.userId], (err, userProfile) => {
-      if (err) {
-        return res.status(500).json({ error: 'Database error' });
-      }
+    const userProfile = await User.findById(req.user.userId).lean();
+    if (!userProfile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
 
-      if (!userProfile) {
-        return res.status(404).json({ error: 'User profile not found' });
-      }
+    const latestRiskEval = await RiskEvaluation.findOne({ user_id: req.user.userId })
+      .sort({ evaluated_at: -1 })
+      .lean();
 
-      db.get(`
-        SELECT * FROM risk_evaluations 
-        WHERE user_id = ? 
-        ORDER BY evaluated_at DESC 
-        LIMIT 1
-      `, [req.user.userId], (err, latestRiskEval) => {
-        if (err) {
-          return res.status(500).json({ error: 'Database error' });
+    const since = new Date();
+    since.setMonth(since.getMonth() - 12);
+    const testHistoryDocs = await CognitiveTest.find({ user_id: req.user.userId, completed_at: { $gte: since } })
+      .select('test_type score max_score time_taken completed_at')
+      .sort({ completed_at: -1 })
+      .lean();
+    const testHistory = testHistoryDocs.map(doc => ({
+      test_type: doc.test_type,
+      score: doc.score,
+      max_score: doc.max_score,
+      time_taken: doc.time_taken,
+      completed_at: doc.completed_at,
+      percentage: (doc.score * 100.0) / doc.max_score
+    }));
+
+    const agg = await CognitiveTest.aggregate([
+      { $match: { user_id: new (require('mongoose').Types.ObjectId)(req.user.userId) } },
+      { $group: {
+          _id: null,
+          total_tests: { $sum: 1 },
+          average_percentage: { $avg: { $multiply: [{ $divide: ['$score', '$max_score'] }, 100] } },
+          first_test: { $min: '$completed_at' },
+          last_test: { $max: '$completed_at' }
         }
+      }
+    ]);
+    const testStats = agg[0] || { total_tests: 0, average_percentage: 0, first_test: null, last_test: null };
 
-        db.all(`
-          SELECT test_type, score, max_score, time_taken, completed_at,
-                 (score * 100.0 / max_score) as percentage
-          FROM cognitive_tests 
-          WHERE user_id = ? 
-          AND completed_at >= datetime('now', '-12 months')
-          ORDER BY completed_at DESC
-        `, [req.user.userId], (err, testHistory) => {
-          if (err) {
-            return res.status(500).json({ error: 'Database error' });
-          }
+    const pdf = generatePDFReport(userProfile, latestRiskEval, testHistory, testStats);
 
-          db.get(`
-            SELECT 
-              COUNT(*) as total_tests,
-              AVG(score * 100.0 / max_score) as average_percentage,
-              MIN(completed_at) as first_test,
-              MAX(completed_at) as last_test
-            FROM cognitive_tests 
-            WHERE user_id = ?
-          `, [req.user.userId], (err, testStats) => {
-            if (err) {
-              return res.status(500).json({ error: 'Database error' });
-            }
-
-            // Generate PDF report
-            const pdf = generatePDFReport(userProfile, latestRiskEval, testHistory, testStats);
-            
-            res.setHeader('Content-Type', 'application/pdf');
-            res.setHeader('Content-Disposition', `attachment; filename="dementia-tracker-report-${Date.now()}.pdf"`);
-            res.setHeader('Content-Length', pdf.output('arraybuffer').byteLength);
-            
-            res.send(Buffer.from(pdf.output('arraybuffer')));
-          });
-        });
-      });
-    });
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="dementia-tracker-report-${Date.now()}.pdf"`);
+    res.setHeader('Content-Length', pdf.output('arraybuffer').byteLength);
+    res.send(Buffer.from(pdf.output('arraybuffer')));
   } catch (error) {
     console.error('Report generation error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -924,8 +786,33 @@ app.use('*', (req, res) => {
 // Initialize database and start server
 async function startServer() {
   try {
-    await initDatabase();
-    console.log('✅ Database initialized successfully');
+    await connectMongo();
+    console.log('✅ MongoDB initialized successfully');
+    // Ensure default admin exists
+    await (async function seedDefaultAdmin() {
+      try {
+        const adminEmail = 'admin@dementiatracker.com';
+        const existing = await User.findOne({ email: adminEmail }).lean();
+        if (existing) {
+          console.log('👤 Default admin already exists');
+          return;
+        }
+        const passwordHash = await bcrypt.hash('admin123', 10);
+        await User.create({
+          email: adminEmail,
+          password_hash: passwordHash,
+          first_name: 'System',
+          last_name: 'Admin',
+          age: 30,
+          gender: 'Other',
+          family_history: '',
+          medical_conditions: ''
+        });
+        console.log('✅ Default admin user created');
+      } catch (err) {
+        console.error('❌ Failed to seed default admin:', err);
+      }
+    })();
     
     const server = app.listen(PORT, () => {
       console.log(`🚀 Dementia Tracker API running on port ${PORT}`);
@@ -948,9 +835,7 @@ async function startServer() {
       console.log('\n🛑 Shutting down gracefully...');
       server.close(() => {
         console.log('✅ Server closed');
-        const { closeDatabase } = require('./database/init');
-        closeDatabase();
-        console.log('✅ Database closed');
+        // Mongo connections will be closed by process exit
         process.exit(0);
       });
     });
@@ -959,9 +844,7 @@ async function startServer() {
       console.log('\n🛑 Shutting down gracefully...');
       server.close(() => {
         console.log('✅ Server closed');
-        const { closeDatabase } = require('./database/init');
-        closeDatabase();
-        console.log('✅ Database closed');
+        // Mongo connections will be closed by process exit
         process.exit(0);
       });
     });

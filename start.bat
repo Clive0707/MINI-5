@@ -44,21 +44,15 @@ if not exist .env (
         echo FRONTEND_URL=http://localhost:3000
         echo EMAIL_USER=your-email@gmail.com
         echo EMAIL_PASS=your-app-password
+        echo MONGODB_URI=mongodb://localhost:27017/dementia-tracker
     ) > .env
     echo ✅ .env file created
     echo ⚠️  Please update .env with your email credentials for notifications
 )
 
-REM Initialize database
-echo 🗄️ Initializing database...
-call npm run init-db
-if %errorlevel% neq 0 (
-    echo ❌ Failed to initialize database
-    pause
-    exit /b 1
-)
-
-echo ✅ Database initialized successfully
+REM Initialize MongoDB connection
+echo 🗄️ Initializing MongoDB connection...
+echo ✅ MongoDB connection will be established when server starts
 
 REM Start backend server
 echo 🚀 Starting backend server...

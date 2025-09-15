@@ -15,7 +15,7 @@ A comprehensive web application for monitoring cognitive health and assessing de
 
 ### Backend
 - **Node.js** with Express.js
-- **SQLite3** database
+- **MongoDB** database with Mongoose ODM
 - **JWT** authentication
 - **bcryptjs** for password hashing
 - **jsPDF** for report generation
@@ -58,6 +58,7 @@ A comprehensive web application for monitoring cognitive health and assessing de
    PORT=5000
    JWT_SECRET=your-secret-key-here
    FRONTEND_URL=http://localhost:3000
+   MONGODB_URI=mongodb://localhost:27017/dementia-tracker
    ```
 
 ## 🚀 Running the Application
