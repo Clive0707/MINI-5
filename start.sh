@@ -49,21 +49,15 @@ JWT_SECRET=dementia-tracker-dev-secret-key
 FRONTEND_URL=http://localhost:3000
 EMAIL_USER=your-email@gmail.com
 EMAIL_PASS=your-app-password
+MONGODB_URI=mongodb://localhost:27017/dementia-tracker
 EOF
     echo "✅ .env file created"
     echo "⚠️  Please update .env with your email credentials for notifications"
 fi
 
-# Initialize database
-echo "🗄️ Initializing database..."
-npm run init-db
-
-if [ $? -ne 0 ]; then
-    echo "❌ Failed to initialize database"
-    exit 1
-fi
-
-echo "✅ Database initialized successfully"
+# Initialize MongoDB connection
+echo "🗄️ Initializing MongoDB connection..."
+echo "✅ MongoDB connection will be established when server starts"
 
 # Start backend server in background
 echo "🚀 Starting backend server..."
