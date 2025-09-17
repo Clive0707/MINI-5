@@ -10,7 +10,7 @@ const Tests = () => {
   const availableTests = [
     {
       id: 'word_recall',
-      name: 'Word Recall Test',
+      name: 'Hopkins Verbal Learning Test–Revised (HVLT-R)',
       description: 'Test your memory by memorizing and recalling a list of words. This test evaluates short-term memory capacity and retention.',
       difficulty: 'Easy',
       duration: '3-5 min',
@@ -20,7 +20,7 @@ const Tests = () => {
     },
     {
       id: 'stroop',
-      name: 'Stroop Test',
+      name: 'Stroop Color–Word Interference Test',
       description: 'Measure your attention and cognitive control by identifying the color of text while ignoring the word itself.',
       difficulty: 'Medium',
       duration: '5-7 min',
@@ -30,7 +30,7 @@ const Tests = () => {
     },
     {
       id: 'pattern_recognition',
-      name: 'Pattern Recognition',
+      name: 'Pattern Recognition Memory (PRM) Test',
       description: 'Assess your logical reasoning and pattern identification skills by finding the next number in sequences.',
       difficulty: 'Hard',
       duration: '7-10 min',

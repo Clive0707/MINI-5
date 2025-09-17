@@ -554,7 +554,7 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
   return (
     <BaseTest
       testType="pattern_recognition"
-      testName="Pattern Recognition Test"
+      testName="Pattern Recognition Memory (PRM) Test"
       instructions={instructions}
       maxScore={10}
       timeLimit={Math.ceil((trials.length * trialTime) / 60)}
@@ -826,7 +826,7 @@ const StroopTest = ({ onTestComplete }) => {
   return (
     <BaseTest
       testType="stroop"
-      testName="Stroop Test"
+      testName="Stroop Color–Word Interference Test"
       instructions={instructions}
       maxScore={10}
       timeLimit={Math.ceil((trials.length * trialTime) / 60)}
@@ -1062,7 +1062,7 @@ const WordRecallTest = ({ onTestComplete }) => {
   return (
     <BaseTest
       testType="word_recall"
-      testName="Word Recall Test"
+      testName="Hopkins Verbal Learning Test–Revised (HVLT-R)"
       instructions={instructions}
       maxScore={10}
       timeLimit={Math.ceil((words.length * studyTime + delayTime) / 60)}
@@ -1087,9 +1087,9 @@ const TestScheduler = () => {
   });
 
   const testTypes = [
-    { value: 'word_recall', label: 'Word Recall Test', icon: Brain, color: 'primary' },
-    { value: 'stroop', label: 'Stroop Test', icon: Target, color: 'secondary' },
-    { value: 'pattern_recognition', label: 'Pattern Recognition', icon: TrendingUp, color: 'accent' }
+    { value: 'word_recall', label: 'Hopkins Verbal Learning Test–Revised (HVLT-R)', icon: Brain, color: 'primary' },
+    { value: 'stroop', label: 'Stroop Color–Word Interference Test', icon: Target, color: 'secondary' },
+    { value: 'pattern_recognition', label: 'Pattern Recognition Memory (PRM) Test', icon: TrendingUp, color: 'accent' }
   ];
 
   const frequencies = [
@@ -1451,7 +1451,7 @@ const Tests = () => {
             <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Brain className="w-8 h-8 text-primary-600" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Word Recall Test</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Hopkins Verbal Learning Test–Revised (HVLT-R)</h3>
             <p className="text-gray-600 mb-4">Test your memory and recall abilities with this comprehensive assessment.</p>
             <Link to="/test/word_recall" className="btn btn-primary w-full">
               <Play className="w-4 h-4 mr-2" />
@@ -1465,7 +1465,7 @@ const Tests = () => {
             <div className="w-16 h-16 bg-secondary-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <Target className="w-8 h-8 text-secondary-600" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Stroop Test</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Stroop Color–Word Interference Test</h3>
             <p className="text-gray-600 mb-4">Measure attention and cognitive control with this classic test.</p>
             <Link to="/test/stroop" className="btn btn-secondary w-full">
               <Play className="w-4 h-4 mr-2" />
@@ -1479,7 +1479,7 @@ const Tests = () => {
             <div className="w-16 h-16 bg-accent-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
               <TrendingUp className="w-8 h-8 text-accent-600" />
             </div>
-            <h3 className="text-xl font-semibold text-gray-900 mb-2">Pattern Recognition</h3>
+            <h3 className="text-xl font-semibold text-gray-900 mb-2">Pattern Recognition Memory (PRM) Test</h3>
             <p className="text-gray-600 mb-4">Test your logical reasoning and pattern identification skills.</p>
             <Link to="/test/pattern_recognition" className="btn btn-accent w-full">
               <Play className="w-4 h-4 mr-2" />
