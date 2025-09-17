@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Brain, Clock, BarChart3, Play, Calendar, Target, TrendingUp, Award, Zap } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
+// import { useAuth } from '../contexts/AuthContext';
 import { TestScheduler } from '../components/tests/Tests';
 
 const Tests = () => {

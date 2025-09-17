@@ -1,79 +1,122 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { CheckCircle, XCircle, Clock, Brain, ArrowLeft, TrendingUp, Award, RefreshCw, Play, Target, Calendar, Plus, Trash2, Edit, X } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, Brain, ArrowLeft, TrendingUp, Award, Play, Target, Calendar, Plus, Trash2, Edit, X } from 'lucide-react';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import TestResults from './TestResults';
 import notificationService from '../../services/notificationService';
+import { useAuth } from '../../contexts/AuthContext';
 
 // ===== BASE TEST COMPONENT =====
 const BaseTest = ({ testType, testName, instructions, children, onTestComplete, maxScore = 10, timeLimit = null }) => {
   const [currentStep, setCurrentStep] = useState('instructions'); // instructions, test, results
   const [startTime, setStartTime] = useState(null);
   const [endTime, setEndTime] = useState(null);
-  const [score, setScore] = useState(0);
-  const [loading, setLoading] = useState(false);
   const [testResult, setTestResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const [pendingMetadata, setPendingMetadata] = useState(null);
+  const [riskData, setRiskData] = useState(null);
 
   const startTest = useCallback(() => {
     setCurrentStep('test');
     setStartTime(new Date());
   }, []);
 
-  const completeTest = useCallback((finalScore) => {
+  const completeTest = useCallback((finalScoreOrPayload) => {
     setEndTime(new Date());
-    setScore(finalScore);
+    let finalScore = typeof finalScoreOrPayload === 'number' ? finalScoreOrPayload : finalScoreOrPayload?.finalScore;
+    const metadata = typeof finalScoreOrPayload === 'object' ? (finalScoreOrPayload?.metadata || null) : null;
+    if (metadata) setPendingMetadata(metadata);
+    // keep local score if needed for UI
+    // setScore(finalScore);
     setCurrentStep('results');
     
     if (onTestComplete) {
       onTestComplete(finalScore);
     }
-  }, [onTestComplete]);
+    // Build local result for Results screen
+    const completionDate = new Date();
+    const percentage = Math.max(0, Math.min(100, Math.round((finalScore / maxScore) * 100)));
+    const performanceLevel = finalScore < 4 ? 'Low' : finalScore <= 7 ? 'Moderate' : 'High';
+    const duration = startTime ? Math.round((completionDate - startTime) / 1000) : null;
+    const completeTestResult = {
+      id: 'local',
+      test_type: testType,
+      score: Number(finalScore?.toFixed ? finalScore.toFixed(2) : finalScore),
+      max_score: maxScore,
+      percentage,
+      performance_level: performanceLevel,
+      time_taken: duration,
+      completed_at: completionDate.toISOString(),
+      metadata: metadata || null,
+    };
+    setTestResult(completeTestResult);
 
-  const submitResults = async () => {
-    if (!startTime || !endTime) return;
-    
+    // Compute risk (single-test session for now)
+    try {
+      const testScores = [completeTestResult.score];
+      const avgTestScore = testScores.reduce((a,b)=>a+b,0) / testScores.length;
+      const test_risk = (1 - (avgTestScore / 10)) * 100;
+      const age = user?.age || 0;
+      const familyHistory = (user?.family_history && user.family_history.toLowerCase() !== 'none');
+      const memorySymptoms = false; // placeholder
+      const age_factor = age >= 75 ? 30 : age >= 65 ? 20 : age >= 60 ? 12 : 0;
+      const demo_risk = Math.min(100, age_factor + (familyHistory ? 20 : 0) + (memorySymptoms ? 15 : 0));
+      const weights = { tests: 0.7, demo: 0.3 };
+      const final_risk = Math.max(0, Math.min(100, Math.round(weights.tests * test_risk + weights.demo * demo_risk)));
+      const category = final_risk >= 50 ? 'High' : final_risk >= 20 ? 'Moderate' : 'Low';
+      setRiskData({ final_risk, category, test_risk: Math.round(test_risk), demo_risk, weights, avgTestScore, perTests: { [testType]: completeTestResult.score } });
+    } catch (e) {
+      console.error('Risk compute error:', e);
+    }
+  }, [onTestComplete, maxScore, startTime, testType, user]);
+
+  const handleQuit = useCallback(() => {
+    const confirmQuit = window.confirm('Are you sure you want to quit? Unsaved progress will be lost.');
+    if (confirmQuit) {
+      navigate('/dashboard');
+    }
+  }, [navigate]);
+
+  const saveAndReturn = async () => {
+    if (!testResult) return;
     setSubmitting(true);
     try {
-      const duration = Math.round((endTime - startTime) / 1000);
-      
-      const response = await api.post('/tests/submit', {
-        test_type: testType,
-        score: score,
-        max_score: maxScore,
-        time_taken: duration,
-        completed_at: endTime.toISOString()
-      });
-
-      // Validate response structure
-      if (!response.data || !response.data.test_result) {
-        throw new Error('Invalid response structure from server');
-      }
-
-      // Store the complete test result with fallbacks
-      const completeTestResult = {
-        ...response.data.test_result,
-        performance_feedback: response.data.performance_feedback || {
-          level: 'Standard',
-          message: 'Test completed successfully'
+      const payload = {
+        userId: user?.id,
+        testTypeId: testType,
+        score: testResult.score,
+        performanceLevel: testResult.performance_level,
+        completionDate: testResult.completed_at,
+        metadata: {
+          timeTakenSeconds: testResult.time_taken,
+          ...(pendingMetadata || {}),
         },
-        next_steps: response.data.next_steps || ['Return to dashboard', 'Review your results']
       };
-      
-      setTestResult(completeTestResult);
-
-      // Notify through notification service
-      notificationService.notifyTestSaved(completeTestResult);
-      
-      // Show results screen
-      setCurrentStep('results');
-      
+      const response = await api.post('/results', payload);
+      if (!response.data?.result) throw new Error('Failed to save result');
+      // Save risk
+      if (riskData) {
+        await api.post('/risk', {
+          userId: user?.id,
+          riskScore: riskData.final_risk,
+          category: riskData.category,
+          contributingFactors: {
+            test_risk: riskData.test_risk,
+            demo_risk: riskData.demo_risk,
+            weights: riskData.weights,
+            factors: ['tests_weight', 'demo_weight']
+          },
+          createdAt: new Date().toISOString()
+        });
+      }
+      notificationService.notifyTestSaved(response.data.result);
+      navigate('/dashboard');
     } catch (error) {
-      console.error('Error submitting test results:', error);
-      const errorMessage = error.response?.data?.error || error.message || 'Failed to save test results. Please try again.';
-      toast.error(errorMessage);
+      const message = error.response?.data?.error || error.message || 'Failed to save results';
+      toast.error(message);
     } finally {
       setSubmitting(false);
     }
@@ -83,31 +126,12 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
     setCurrentStep('instructions');
     setStartTime(null);
     setEndTime(null);
-    setScore(0);
     setTestResult(null);
+    setPendingMetadata(null);
+    setRiskData(null);
   };
 
-  const getScoreColor = (score) => {
-    if (score >= 8) return 'success';
-    if (score >= 6) return 'warning';
-    return 'danger';
-  };
-
-  const getScoreMessage = (score) => {
-    if (score >= 9) return 'Excellent! Outstanding cognitive performance.';
-    if (score >= 8) return 'Great job! Strong cognitive abilities.';
-    if (score >= 7) return 'Good work! Above average performance.';
-    if (score >= 6) return 'Fair performance. Room for improvement.';
-    if (score >= 5) return 'Below average. Consider retaking the test.';
-    return 'Poor performance. Please retake the test.';
-  };
-
-  const getScoreEmoji = (score) => {
-    if (score >= 8) return '🎉';
-    if (score >= 6) return '👍';
-    if (score >= 4) return '🤔';
-    return '😔';
-  };
+  // Unused helpers removed
 
   // Instructions Step
   if (currentStep === 'instructions') {
@@ -195,12 +219,15 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
                   <Brain className="w-5 h-5 text-primary-600" />
                   <span className="font-medium text-gray-900">{testName}</span>
                 </div>
-                {timeLimit && (
-                  <div className="flex items-center space-x-2 text-sm text-gray-600">
-                    <Clock className="w-4 h-4" />
-                    <span>Time remaining: {timeLimit}:00</span>
-                  </div>
-                )}
+                <div className="flex items-center space-x-3">
+                  {timeLimit && (
+                    <div className="flex items-center space-x-2 text-sm text-gray-600">
+                      <Clock className="w-4 h-4" />
+                      <span>Time remaining: {timeLimit}:00</span>
+                    </div>
+                  )}
+                  <button onClick={handleQuit} className="px-4 py-2 text-sm font-semibold text-danger-700 border border-danger-200 rounded-xl hover:bg-danger-50">Quit</button>
+                </div>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
                 <div className="bg-gradient-to-r from-primary-500 to-secondary-500 h-2 rounded-full transition-all duration-300" style={{ width: '33%' }}></div>
@@ -213,6 +240,14 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
         <div className="pt-20 pb-8">
           <div className="max-w-4xl mx-auto px-4">
             {React.cloneElement(children, { onTestComplete: completeTest })}
+            <div className="mt-8 flex justify-center">
+              <button
+                onClick={() => { /* explicit complete button; child still controls scoring */ completeTest({ finalScore: 0, metadata: {} }); }}
+                className="inline-flex items-center px-6 py-3 rounded-2xl text-white font-semibold bg-primary-600 hover:bg-primary-700 transition-colors"
+              >
+                Complete & View Results
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -226,6 +261,10 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
         testResult={testResult}
         onRetake={retakeTest}
         onViewHistory={() => navigate('/tests')}
+        onSave={saveAndReturn}
+        onReturnWithoutSaving={() => navigate('/dashboard')}
+        saving={submitting}
+        riskData={riskData}
         testName={testName}
         maxScore={maxScore}
       />
@@ -373,9 +412,16 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
         setTimeLeft(trialTime);
       } else {
         // Test complete
-        const finalScore = Math.round((score + (isCorrect ? 1 : 0)) / trials.length * 10);
+        const correct = score + (isCorrect ? 1 : 0);
+        const finalScore = Number(((correct / trials.length) * 10).toFixed(2));
         if (onTestComplete) {
-          onTestComplete(finalScore);
+          onTestComplete({
+            finalScore,
+            metadata: {
+              totalTrials: trials.length,
+              correctAnswers: correct,
+            }
+          });
         }
       }
     }, feedbackTime * 1000);
@@ -405,9 +451,16 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
               setTimeLeft(trialTime);
             } else {
               // Test complete
-              const finalScore = Math.round(score / trials.length * 10);
+              const correct = score;
+              const finalScore = Number(((correct / trials.length) * 10).toFixed(2));
               if (onTestComplete) {
-                onTestComplete(finalScore);
+                onTestComplete({
+                  finalScore,
+                  metadata: {
+                    totalTrials: trials.length,
+                    correctAnswers: correct,
+                  }
+                });
               }
             }
           }, feedbackTime * 1000);
@@ -514,25 +567,31 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
 // ===== STROOP TEST =====
 const StroopTest = ({ onTestComplete }) => {
   const [currentTrial, setCurrentTrial] = useState(0);
-  const [score, setScore] = useState(0);
+  const [correctCount, setCorrectCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
   const [userAnswer, setUserAnswer] = useState('');
   const [showFeedback, setShowFeedback] = useState(false);
   const [feedback, setFeedback] = useState({ correct: false, message: '' });
+  const [trialStartTs, setTrialStartTs] = useState(null);
+  const [responseTimes, setResponseTimes] = useState([]); // seconds per trial
 
   // Test configuration
-  const trials = useMemo(() => [
-    { word: 'RED', color: 'blue', correctAnswer: 'blue' },
-    { word: 'BLUE', color: 'red', correctAnswer: 'red' },
-    { word: 'GREEN', color: 'yellow', correctAnswer: 'yellow' },
-    { word: 'YELLOW', color: 'green', correctAnswer: 'green' },
-    { word: 'RED', color: 'green', correctAnswer: 'green' },
-    { word: 'BLUE', color: 'yellow', correctAnswer: 'yellow' },
-    { word: 'GREEN', color: 'red', correctAnswer: 'red' },
-    { word: 'YELLOW', color: 'blue', correctAnswer: 'blue' },
-    { word: 'RED', color: 'yellow', correctAnswer: 'yellow' },
-    { word: 'BLUE', color: 'green', correctAnswer: 'green' }
-  ], []);
+  const trials = useMemo(() => {
+    const base = [
+      { word: 'RED', color: 'blue', correctAnswer: 'blue' },
+      { word: 'BLUE', color: 'red', correctAnswer: 'red' },
+      { word: 'GREEN', color: 'yellow', correctAnswer: 'yellow' },
+      { word: 'YELLOW', color: 'green', correctAnswer: 'green' },
+      { word: 'RED', color: 'green', correctAnswer: 'green' },
+      { word: 'BLUE', color: 'yellow', correctAnswer: 'yellow' },
+      { word: 'GREEN', color: 'red', correctAnswer: 'red' },
+      { word: 'YELLOW', color: 'blue', correctAnswer: 'blue' },
+      { word: 'RED', color: 'yellow', correctAnswer: 'yellow' },
+      { word: 'BLUE', color: 'green', correctAnswer: 'green' }
+    ];
+    // Repeat to reach ~30 trials
+    return [...base, ...base, ...base];
+  }, []);
 
   const trialTime = 5; // seconds per trial
   const feedbackTime = 2; // seconds to show feedback
@@ -586,6 +645,8 @@ const StroopTest = ({ onTestComplete }) => {
   const handleColorSelect = (selectedColor) => {
     const currentTrialData = trials[currentTrial];
     const isCorrect = selectedColor === currentTrialData.correctAnswer;
+    const rt = trialStartTs ? (Date.now() - trialStartTs) / 1000 : null;
+    if (rt !== null) setResponseTimes(prev => [...prev, rt]);
     
     setUserAnswer(selectedColor);
     setFeedback({
@@ -595,9 +656,7 @@ const StroopTest = ({ onTestComplete }) => {
     setShowFeedback(true);
 
     // Update score
-    if (isCorrect) {
-      setScore(prev => prev + 1);
-    }
+    if (isCorrect) setCorrectCount(prev => prev + 1);
 
     // Show feedback for a few seconds, then move to next trial
     setTimeout(() => {
@@ -607,11 +666,29 @@ const StroopTest = ({ onTestComplete }) => {
       if (currentTrial < trials.length - 1) {
         setCurrentTrial(currentTrial + 1);
         setTimeLeft(trialTime);
+        setTrialStartTs(Date.now());
       } else {
         // Test complete
-        const finalScore = Math.round((score + (isCorrect ? 1 : 0)) / trials.length * 10);
+        const total = trials.length;
+        const correct = correctCount + (isCorrect ? 1 : 0);
+        const basePercent = (correct / total) * 100;
+        const avgRT = responseTimes.length > 0 ? (responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) : (rt || 0);
+        const penalty = avgRT > 2 ? Math.min(20, (avgRT - 2) * 10) : 0; // up to -20%
+        const finalPercent = Math.max(0, Math.min(100, basePercent - penalty));
+        const finalScore = Number(((finalPercent / 100) * 10).toFixed(2));
         if (onTestComplete) {
-          onTestComplete(finalScore);
+          onTestComplete({
+            finalScore,
+            metadata: {
+              totalTrials: total,
+              correctResponses: correct,
+              avgResponseTimeSeconds: avgRT,
+              responseTimes,
+              basePercent,
+              penaltyPercent: penalty,
+              finalPercent
+            }
+          });
         }
       }
     }, feedbackTime * 1000);
@@ -638,11 +715,29 @@ const StroopTest = ({ onTestComplete }) => {
             if (currentTrial < trials.length - 1) {
               setCurrentTrial(currentTrial + 1);
               setTimeLeft(trialTime);
+              setTrialStartTs(Date.now());
             } else {
               // Test complete
-              const finalScore = Math.round(score / trials.length * 10);
+              const total = trials.length;
+              const correct = correctCount;
+              const basePercent = (correct / total) * 100;
+              const avgRT = responseTimes.length > 0 ? (responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) : 0;
+              const penalty = avgRT > 2 ? Math.min(20, (avgRT - 2) * 10) : 0;
+              const finalPercent = Math.max(0, Math.min(100, basePercent - penalty));
+              const finalScore = Number(((finalPercent / 100) * 10).toFixed(2));
               if (onTestComplete) {
-                onTestComplete(finalScore);
+                onTestComplete({
+                  finalScore,
+                  metadata: {
+                    totalTrials: total,
+                    correctResponses: correct,
+                    avgResponseTimeSeconds: avgRT,
+                    responseTimes,
+                    basePercent,
+                    penaltyPercent: penalty,
+                    finalPercent
+                  }
+                });
               }
             }
           }, feedbackTime * 1000);
@@ -651,12 +746,13 @@ const StroopTest = ({ onTestComplete }) => {
 
       return () => clearTimeout(timer);
     }
-  }, [currentTrial, timeLeft, showFeedback, trials, score, onTestComplete]);
+  }, [currentTrial, timeLeft, showFeedback, trials, correctCount, responseTimes, onTestComplete]);
 
   // Initialize first trial
   useEffect(() => {
     if (currentTrial === 0 && timeLeft === 0) {
       setTimeLeft(trialTime);
+      setTrialStartTs(Date.now());
     }
   }, [currentTrial, timeLeft, trialTime]);
 
@@ -800,32 +896,37 @@ const WordRecallTest = ({ onTestComplete }) => {
   const calculateScore = useCallback(() => {
     let correctWords = 0;
     const userWords = userInputs.map(input => input.trim().toLowerCase());
-    
+    const uniqueCorrect = new Set();
     words.forEach(word => {
       const wordLower = word.toLowerCase();
       // Check for exact matches or close matches (allowing for typos)
-      if (userWords.includes(wordLower) || 
-          userWords.some(userWord => 
-            userWord.includes(wordLower) || wordLower.includes(userWord) ||
-            (userWord.length > 3 && wordLower.length > 3 && 
-             userWord.slice(0, 3) === wordLower.slice(0, 3))
-          )) {
-        correctWords++;
-      }
+      const matched = userWords.some(userWord => 
+        userWord === wordLower ||
+        userWord.includes(wordLower) || wordLower.includes(userWord) ||
+        (userWord.length > 3 && wordLower.length > 3 && userWord.slice(0, 3) === wordLower.slice(0, 3))
+      );
+      if (matched) uniqueCorrect.add(wordLower);
     });
+    correctWords = uniqueCorrect.size;
 
     // Calculate score on 0-10 scale
     const percentage = (correctWords / words.length) * 100;
-    const finalScore = Math.round((percentage / 100) * 10);
-    return finalScore;
+    const finalScore = Number(((percentage / 100) * 10).toFixed(2));
+    return { finalScore, correctWords };
   }, [userInputs, words]);
 
   const handleRecallComplete = useCallback(() => {
-    const finalScore = calculateScore();
+    const { finalScore, correctWords } = calculateScore();
     if (onTestComplete) {
-      onTestComplete(finalScore);
+      onTestComplete({
+        finalScore,
+        metadata: {
+          totalTrials: words.length,
+          correctResponses: correctWords,
+        }
+      });
     }
-  }, [calculateScore, onTestComplete]);
+  }, [calculateScore, onTestComplete, words.length]);
 
   // Timer effects
   useEffect(() => {

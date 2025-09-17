@@ -2,13 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { 
   Brain, 
-  TrendingUp, 
   Calendar, 
   AlertTriangle, 
   CheckCircle, 
   Clock, 
   BarChart3, 
-  Plus,
   ArrowRight,
   Activity,
   Target,
@@ -17,7 +15,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
+import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import notificationService from '../services/notificationService';
 
 const Dashboard = () => {

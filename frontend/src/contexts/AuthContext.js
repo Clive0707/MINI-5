@@ -24,6 +24,7 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token]);
 
   const fetchUserProfile = async () => {
@@ -84,7 +85,7 @@ export const AuthProvider = ({ children }) => {
 
   const updateProfile = async (profileData) => {
     try {
-      const response = await api.put('/auth/profile', profileData);
+      await api.put('/auth/profile', profileData);
       setUser(prevUser => ({ ...prevUser, ...profileData }));
       toast.success('Profile updated successfully');
       return { success: true };

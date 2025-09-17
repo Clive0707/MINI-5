@@ -364,6 +364,193 @@ app.post('/api/tests/submit', authenticateToken, async (req, res) => {
   }
 });
 
+// ===== RESULTS ROUTES (Normalized results API) =====
+
+// Save a test result (generic across test types)
+app.post('/api/results', authenticateToken, async (req, res) => {
+  try {
+    const {
+      userId, // optional, prefer JWT
+      testTypeId, // string identifier (e.g., 'word_recall', 'stroop', 'pattern_recognition')
+      score, // normalized 0-10 scale
+      performanceLevel, // 'Low' | 'Moderate' | 'High'
+      completionDate, // optional ISO string
+      metadata, // optional JSON metadata
+    } = req.body || {};
+
+    if (!testTypeId || score === undefined || score === null) {
+      return res.status(400).json({ error: 'testTypeId and score are required' });
+    }
+
+    const normalizedScore = Math.max(0, Math.min(10, Number(score)));
+    const maxScore = 10;
+
+    const created = await CognitiveTest.create({
+      user_id: userId || req.user.userId,
+      test_type: String(testTypeId),
+      score: normalizedScore,
+      max_score: maxScore,
+      time_taken: metadata?.timeTakenSeconds || null,
+      test_data: {
+        performanceLevel: performanceLevel || null,
+        metadata: metadata || null,
+      },
+      completed_at: completionDate ? new Date(completionDate) : new Date(),
+    });
+
+    const percentage = Math.round((created.score / created.max_score) * 100);
+
+    return res.status(201).json({
+      result: {
+        id: created._id.toString(),
+        test_type: created.test_type,
+        score: created.score,
+        max_score: created.max_score,
+        percentage,
+        performance_level: created.test_data?.performanceLevel || null,
+        time_taken: created.time_taken || null,
+        completed_at: created.completed_at,
+        metadata: created.test_data?.metadata || null,
+      }
+    });
+  } catch (error) {
+    console.error('❌ Save result error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Fetch recent results for current user (or specific user via param if admin later)
+app.get('/api/results', authenticateToken, async (req, res) => {
+  try {
+    const limit = Math.max(1, Math.min(100, parseInt(req.query.limit) || 10));
+    const docs = await CognitiveTest.find({ user_id: req.user.userId })
+      .select('test_type score max_score time_taken completed_at test_data')
+      .sort({ completed_at: -1 })
+      .limit(limit)
+      .lean();
+
+    const results = docs.map(doc => ({
+      id: doc._id.toString(),
+      test_type: doc.test_type,
+      score: doc.score,
+      max_score: doc.max_score,
+      percentage: Math.round((doc.score / doc.max_score) * 100),
+      time_taken: doc.time_taken || null,
+      completed_at: doc.completed_at,
+      performance_level: doc.test_data?.performanceLevel || null,
+      metadata: doc.test_data?.metadata || null,
+    }));
+
+    return res.json({ results });
+  } catch (error) {
+    console.error('❌ Fetch results error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ===== RISK ASSESSMENT ROUTES =====
+app.post('/api/risk', authenticateToken, async (req, res) => {
+  try {
+    const { userId, riskScore, category, contributingFactors, createdAt } = req.body || {};
+    if (riskScore === undefined || !category) {
+      return res.status(400).json({ error: 'riskScore and category are required' });
+    }
+
+    const saved = await RiskEvaluation.create({
+      user_id: userId || req.user.userId,
+      risk_category: category,
+      risk_score: Math.max(0, Math.min(100, Number(riskScore))),
+      factors: Array.isArray(contributingFactors?.factors)
+        ? contributingFactors.factors
+        : ['tests_weight', 'demo_weight'],
+      recommendations: contributingFactors?.recommendations || [],
+      evaluated_at: createdAt ? new Date(createdAt) : new Date(),
+    });
+
+    return res.status(201).json({
+      risk: {
+        id: saved._id.toString(),
+        risk_score: saved.risk_score,
+        risk_category: saved.risk_category,
+        evaluated_at: saved.evaluated_at,
+        contributing_factors: contributingFactors || null,
+      }
+    });
+  } catch (error) {
+    console.error('❌ Save risk error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+// Dashboard alias endpoint to satisfy required route shape
+app.get('/api/dashboard/:userId', authenticateToken, async (req, res) => {
+  try {
+    // Only allow current user for now
+    if (req.params.userId && req.params.userId !== req.user.userId) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+
+    // Reuse existing dashboard logic via direct aggregation
+    const userProfile = await User.findById(req.user.userId).lean();
+    if (!userProfile) {
+      return res.status(404).json({ error: 'User profile not found' });
+    }
+
+    const latestRiskEval = await RiskEvaluation.findOne({ user_id: req.user.userId })
+      .select('risk_category risk_score evaluated_at')
+      .sort({ evaluated_at: -1 })
+      .lean();
+
+    const agg = await CognitiveTest.aggregate([
+      { $match: { user_id: new (require('mongoose').Types.ObjectId)(req.user.userId) } },
+      { $group: {
+          _id: null,
+          total_tests: { $sum: 1 },
+          average_percentage: { $avg: { $multiply: [{ $divide: ['$score', '$max_score'] }, 100] } },
+          last_test_date: { $max: '$completed_at' }
+        }
+      }
+    ]);
+    const testStats = agg[0] || { total_tests: 0, average_percentage: 0, last_test_date: null };
+
+    const recentDocs = await CognitiveTest.find({ user_id: req.user.userId })
+      .select('test_type score max_score completed_at')
+      .sort({ completed_at: -1 })
+      .limit(3)
+      .lean();
+    const recentTests = recentDocs.map(doc => ({
+      test_type: doc.test_type,
+      percentage: Math.round((doc.score * 100.0) / doc.max_score),
+      completed_at: doc.completed_at
+    }));
+
+    const dashboardData = {
+      user_profile: {
+        name: `${userProfile.first_name} ${userProfile.last_name}`,
+        age: userProfile.age,
+        gender: userProfile.gender
+      },
+      risk_assessment: latestRiskEval ? {
+        category: latestRiskEval.risk_category,
+        score: latestRiskEval.risk_score,
+        date: latestRiskEval.evaluated_at
+      } : null,
+      test_summary: {
+        total_tests: testStats.total_tests || 0,
+        average_performance: Math.round(testStats.average_percentage || 0),
+        last_test_date: testStats.last_test_date || null
+      },
+      recent_tests: recentTests,
+      next_scheduled_test: null,
+      last_updated: new Date().toISOString()
+    };
+
+    return res.json({ dashboard: dashboardData });
+  } catch (error) {
+    console.error('❌ Dashboard alias error:', error);
+    return res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
 // Helper function to get performance feedback
 function getPerformanceFeedback(percentage) {
   if (percentage >= 90) return { level: 'Excellent', message: 'Outstanding cognitive performance!', color: 'success' };

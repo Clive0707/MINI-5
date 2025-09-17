@@ -126,9 +126,9 @@ const Login = () => {
                 </label>
               </div>
               <div className="text-sm">
-                <a href="#" className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-300">
+                <button type="button" className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-300">
                   Forgot password?
-                </a>
+                </button>
               </div>
             </div>
 
@@ -224,9 +224,9 @@ const Login = () => {
         {/* Footer Links */}
         <div className="text-center text-sm text-gray-500">
           <div className="flex justify-center space-x-4 mb-2">
-            <a href="#" className="hover:text-gray-700 transition-colors duration-300">Privacy Policy</a>
-            <a href="#" className="hover:text-gray-700 transition-colors duration-300">Terms of Service</a>
-            <a href="#" className="hover:text-gray-700 transition-colors duration-300">Help Center</a>
+            <button type="button" className="hover:text-gray-700 transition-colors duration-300">Privacy Policy</button>
+            <button type="button" className="hover:text-gray-700 transition-colors duration-300">Terms of Service</button>
+            <button type="button" className="hover:text-gray-700 transition-colors duration-300">Help Center</button>
           </div>
           <p>&copy; 2024 Dementia Tracker. All rights reserved.</p>
         </div>

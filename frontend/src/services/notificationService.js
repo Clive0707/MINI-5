@@ -25,7 +25,7 @@ class NotificationService {
 
   // Test completion notification
   notifyTestCompletion(testResult) {
-    const { test_type, percentage, performance_feedback } = testResult;
+    const { test_type, percentage } = testResult;
     
     // Show success toast
     toast.success(`🎉 ${test_type.replace('_', ' ')} test completed! Score: ${percentage}%`, {
@@ -51,6 +51,8 @@ class NotificationService {
 
       // Trigger dashboard refresh notification
       this.notify('DASHBOARD_REFRESH', 'Dashboard updated with new results', { testResult });
+      // Also provide an optimistic update event
+      this.notify('TEST_COMPLETED', 'Test completed successfully', { testResult });
     } catch (error) {
       console.error('Error in notifyTestSaved:', error);
       toast.success('✅ Test results saved successfully!', {

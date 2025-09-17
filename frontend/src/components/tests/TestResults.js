@@ -4,26 +4,25 @@ import {
   CheckCircle, 
   AlertTriangle, 
   XCircle, 
-  Brain, 
   TrendingUp, 
-  Calendar, 
-  ArrowRight,
   RefreshCw,
-  Home,
-  BarChart3
+  Home
 } from 'lucide-react';
-import toast from 'react-hot-toast';
 
 const TestResults = ({ 
   testResult, 
   onRetake, 
   onViewHistory,
+  onSave,
+  onReturnWithoutSaving,
+  saving = false,
+  riskData,
   testName,
   maxScore = 10 
 }) => {
   const navigate = useNavigate();
 
-  if (!testResult || !testResult.score) {
+  if (!testResult || testResult.score === undefined || testResult.score === null) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-accent-50 flex items-center justify-center">
         <div className="text-center">
@@ -45,13 +44,15 @@ const TestResults = ({
     score, 
     percentage: rawPercentage, 
     time_taken, 
-    completion_date,
+    completed_at,
+    performance_level,
     performance_feedback,
-    next_steps 
+    next_steps,
+    metadata
   } = testResult || {};
   
   // Calculate percentage if not provided
-  const percentage = rawPercentage || (score && testResult.max_score ? Math.round((score / testResult.max_score) * 100) : 0);
+  const percentage = (rawPercentage !== undefined && rawPercentage !== null) ? rawPercentage : (score !== undefined && testResult.max_score ? Math.round((score / testResult.max_score) * 100) : 0);
 
   const getScoreColor = (percentage) => {
     if (percentage >= 80) return 'text-green-600';
@@ -115,10 +116,11 @@ const TestResults = ({
               <p className="text-2xl font-semibold text-gray-700 mb-2">
                 {score}/{maxScore} points
               </p>
-              <p className="text-lg text-gray-600 mb-4">
-                {getScoreMessage(percentage)}
-              </p>
-              <div className="inline-block px-4 py-2 bg-gray-100 rounded-full">
+              <p className="text-lg text-gray-600 mb-1">{getScoreMessage(percentage)}</p>
+              {performance_level && (
+                <p className="text-sm text-gray-500">Performance Level: <span className="font-semibold">{performance_level}</span></p>
+              )}
+              <div className="inline-block px-4 py-2 bg-gray-100 rounded-full mt-3">
                 <span className="text-sm font-medium text-gray-700">
                   {performance_feedback?.level || 'Standard'} Performance
                 </span>
@@ -127,6 +129,23 @@ const TestResults = ({
 
             {/* Details Section */}
             <div className="space-y-6">
+              {riskData && (
+                <div className="bg-gradient-to-br from-primary-50 to-secondary-50 p-4 rounded-xl border border-primary-100">
+                  <h3 className="text-lg font-semibold text-gray-900 mb-2">Estimated dementia risk</h3>
+                  <div className="text-3xl font-bold mb-1">
+                    <span className={riskData.final_risk >= 50 ? 'text-red-600' : riskData.final_risk >= 20 ? 'text-yellow-600' : 'text-green-600'}>
+                      {riskData.final_risk}%
+                    </span>
+                    <span className="ml-2 text-sm align-middle px-2 py-1 rounded-full bg-gray-100 text-gray-700">{riskData.category}</span>
+                  </div>
+                  <p className="text-xs text-gray-600 mb-3">This is an estimated risk indicator — not a medical diagnosis. See a clinician for evaluation.</p>
+                  <div className="text-sm text-gray-700 space-y-1">
+                    <div>Test contribution: <span className="font-semibold">{riskData.test_risk}%</span> (avg score {riskData.avgTestScore?.toFixed?.(2) ?? riskData.avgTestScore}/10)</div>
+                    <div>Demographics contribution: <span className="font-semibold">{riskData.demo_risk}%</span></div>
+                    <div className="text-xs text-gray-500">Weights: tests {Math.round((riskData.weights?.tests||0)*100)}%, demo {Math.round((riskData.weights?.demo||0)*100)}%</div>
+                  </div>
+                </div>
+              )}
               <div>
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">Test Details</h3>
                 <div className="space-y-3">
@@ -139,7 +158,7 @@ const TestResults = ({
                   <div className="flex justify-between">
                     <span className="text-gray-600">Completion Date:</span>
                     <span className="font-medium text-gray-900">
-                      {completion_date ? new Date(completion_date).toLocaleDateString() : 'N/A'}
+                      {completed_at ? new Date(completed_at).toLocaleString() : 'N/A'}
                     </span>
                   </div>
                   <div className="flex justify-between">
@@ -148,12 +167,18 @@ const TestResults = ({
                       {time_taken ? `${time_taken}s` : 'N/A'}
                     </span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Performance Level:</span>
-                    <span className="font-medium text-gray-900">
-                      {performance_feedback?.level || 'Standard'}
-                    </span>
-                  </div>
+                  {metadata && metadata.totalTrials !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Correct / Total:</span>
+                      <span className="font-medium text-gray-900">{(metadata.correctResponses || metadata.correctAnswers || 0)} / {metadata.totalTrials}</span>
+                    </div>
+                  )}
+                  {metadata && metadata.avgResponseTimeSeconds !== undefined && (
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Avg. Response Time:</span>
+                      <span className="font-medium text-gray-900">{Number(metadata.avgResponseTimeSeconds).toFixed(2)}s</span>
+                    </div>
+                  )}
                 </div>
               </div>
 
@@ -202,31 +227,31 @@ const TestResults = ({
           </button>
 
           <button
-            onClick={handleViewHistory}
-            className="flex items-center justify-center space-x-2 px-6 py-4 bg-secondary-600 text-white rounded-xl hover:bg-secondary-700 transition-colors font-medium"
+            onClick={onSave}
+            disabled={saving}
+            className={`flex items-center justify-center space-x-2 px-6 py-4 ${saving ? 'bg-secondary-400' : 'bg-secondary-600 hover:bg-secondary-700'} text-white rounded-xl transition-colors font-medium`}
           >
-            <BarChart3 className="w-5 h-5" />
-            <span>View Test History</span>
+            <CheckCircle className="w-5 h-5" />
+            <span>{saving ? 'Saving...' : 'Save & Return to Dashboard'}</span>
           </button>
+
+          <button
+            onClick={onReturnWithoutSaving || handleViewHistory}
+            className="flex items-center justify-center space-x-2 px-6 py-4 bg-gray-600 text-white rounded-xl hover:bg-gray-700 transition-colors font-medium"
+          >
+            <XCircle className="w-5 h-5" />
+            <span>Return without Saving</span>
+          </button>
+
+          <div className="hidden md:block"></div>
 
           <button
             onClick={handleRetake}
             className="flex items-center justify-center space-x-2 px-6 py-4 bg-accent-600 text-white rounded-xl hover:bg-accent-700 transition-colors font-medium"
           >
             <RefreshCw className="w-5 h-5" />
-            <span>Retake Test</span>
+            <span>Retry Test</span>
           </button>
-        </div>
-
-        {/* Success Message */}
-        <div className="mt-8 text-center">
-          <div className="inline-flex items-center space-x-2 bg-green-100 text-green-800 px-4 py-2 rounded-full">
-            <CheckCircle className="w-5 h-5" />
-            <span className="font-medium">Test results saved successfully!</span>
-          </div>
-          <p className="text-sm text-gray-600 mt-2">
-            Your results have been integrated into your dashboard and reports.
-          </p>
         </div>
       </div>
     </div>
