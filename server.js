@@ -6,6 +6,7 @@ const path = require('path');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const jsPDF = require('jspdf');
+const dementiaRoutes = require('./routes/dementia');
 const { connectMongo } = require('./database/mongo');
 const User = require('./database/models/User');
 const CognitiveTest = require('./database/models/CognitiveTest');
@@ -60,6 +61,9 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Mount dementia routes
+app.use('/api/dementia', dementiaRoutes);
 
 // Database initialization (MongoDB)
 

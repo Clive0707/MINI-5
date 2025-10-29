@@ -12,6 +12,7 @@ import Profile from './pages/Profile';
 import Reports from './pages/Reports';
 import RiskEvaluation from './pages/RiskEvaluation';
 import ProtectedRoute from './components/auth/ProtectedRoute';
+import StoryRecall from './pages/StoryRecall';
 
 function App() {
   const { user, loading } = useAuth();
@@ -67,6 +68,12 @@ function App() {
         <Route path="/risk-evaluation" element={
           <ProtectedRoute>
             <RiskEvaluation />
+          </ProtectedRoute>
+        } />
+        
+        <Route path="/story-recall" element={
+          <ProtectedRoute>
+            <StoryRecall />
           </ProtectedRoute>
         } />
         
