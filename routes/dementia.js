@@ -43,15 +43,52 @@ const upload = multer({
   }
 })
 
-// Gemini init
+// Gemini init - check on module load and also provide a function to re-check
 let genAI = null
-if (process.env.GEMINI_API_KEY) {
-  genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+function initializeGemini() {
+  if (process.env.GEMINI_API_KEY) {
+    try {
+      genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY)
+      console.log('✅ Gemini AI initialized successfully')
+    } catch (error) {
+      console.error('❌ Failed to initialize Gemini AI:', error.message)
+      genAI = null
+    }
+  } else {
+    console.warn('⚠️  GEMINI_API_KEY not found in environment variables. Story Recall will use pre-defined story.')
+    genAI = null
+  }
 }
+// Initialize on module load
+initializeGemini()
 
 const FAST_CONFIG = { temperature: 0.7, topK: 20, topP: 0.8, maxOutputTokens: 512, candidateCount: 1 }
 const EVAL_CONFIG = { temperature: 0.3, topK: 10, topP: 0.7, maxOutputTokens: 256, candidateCount: 1 }
 const callAIWithTimeout = async (promise, ms = 50000) => Promise.race([promise, new Promise((_, r) => setTimeout(() => r(new Error('AI_TIMEOUT')), ms))])
+
+// Pre-defined story for fallback (when Gemini API is not available)
+const PREDEFINED_STORY = {
+  storyText: `Anna woke up early on Saturday morning to visit her grandmother at the nursing home. She packed a basket with fresh apples from the farmer's market and a warm blueberry pie she had baked the night before. The drive took about forty minutes through the countryside, passing fields of golden wheat and grazing cows. When she arrived, her grandmother was sitting in the garden, reading a book about birds. They spent the afternoon talking about family memories, looking at old photographs, and feeding the colorful birds that visited the garden. Before leaving, Anna helped her grandmother plant new rose bushes near the wooden bench. Her grandmother thanked her with tears of joy and promised to take care of the roses. Anna felt happy knowing she had brought sunshine to her grandmother's day.`,
+  recallQuestions: [
+    'Who did Anna visit?',
+    'What day of the week did Anna visit?',
+    'What did Anna bring in the basket?',
+    'How long did the drive take?',
+    'Where was Anna\'s grandmother when she arrived?',
+    'What was her grandmother reading about?',
+    'What did they plant together?'
+  ],
+  // Expected keywords for each question (for keyword matching)
+  expectedKeywords: [
+    ['grandmother', 'grandma', 'grandmother\'s', 'grandma\'s'], // Question 1: Who did Anna visit?
+    ['saturday'], // Question 2: What day of the week did Anna visit?
+    ['apple', 'apples', 'pie', 'blueberry', 'basket'], // Question 3: What did Anna bring in the basket?
+    ['forty', '40', 'minutes', 'minute'], // Question 4: How long did the drive take?
+    ['garden'], // Question 5: Where was Anna's grandmother when she arrived?
+    ['bird', 'birds'], // Question 6: What was her grandmother reading about?
+    ['rose', 'roses', 'bush', 'bushes'] // Question 7: What did they plant together?
+  ]
+}
 
 // In-memory sessions: dementia story recall
 const dementiaSessions = new Map()
@@ -59,34 +96,39 @@ const dementiaSessions = new Map()
 // POST /api/dementia/start
 router.post('/start', authenticateToken, async (req, res) => {
   try {
-    if (!genAI) return res.status(500).json({ error: 'AI service not configured' })
+    let storyObj = null
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash', generationConfig: FAST_CONFIG })
-    const prompt = `You are running a cognitive assessment focusing on story recall.
+    // Try to use Gemini API if available
+    if (genAI) {
+      try {
+        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash', generationConfig: FAST_CONFIG })
+        const prompt = `You are running a cognitive assessment focusing on story recall.
 Create JSON with a 10-sentence coherent story (plain text, no numbers) and 5-7 concise recall questions about key details.
 Return strictly JSON with keys: storyText (string), recallQuestions (array of strings).`
 
-    const result = await callAIWithTimeout(
-      model.generateContent({ contents: [{ parts: [{ text: prompt }] }] })
-    )
-    const txt = await result.response.text()
-    const jsonMatch = txt.match(/\{[\s\S]*\}/)
-    let storyObj
-    try {
-      storyObj = jsonMatch ? JSON.parse(jsonMatch[0]) : null
-    } catch (_) {
-      storyObj = null
-    }
-    if (!storyObj || !storyObj.storyText || !Array.isArray(storyObj.recallQuestions)) {
-      // minimal fallback
-      storyObj = {
-        storyText: 'Emma visited her grandfather every Sunday. He loved telling stories about his garden... (continue to 10 sentences).',
-        recallQuestions: [
-          'Who did Emma visit?',
-          'How often did she visit?',
-          'What did her grandfather love talking about?'
-        ]
+        const result = await callAIWithTimeout(
+          model.generateContent({ contents: [{ parts: [{ text: prompt }] }] })
+        )
+        const txt = await result.response.text()
+        const jsonMatch = txt.match(/\{[\s\S]*\}/)
+        try {
+          const parsed = jsonMatch ? JSON.parse(jsonMatch[0]) : null
+          if (parsed && parsed.storyText && Array.isArray(parsed.recallQuestions)) {
+            storyObj = parsed
+            console.log('✅ Using AI-generated story')
+          }
+        } catch (parseError) {
+          console.warn('⚠️  Failed to parse AI response, using pre-defined story')
+        }
+      } catch (aiError) {
+        console.warn('⚠️  AI generation failed, using pre-defined story:', aiError.message)
       }
+    }
+
+    // Fallback to pre-defined story if AI is not available or fails
+    if (!storyObj) {
+      storyObj = PREDEFINED_STORY
+      console.log('📖 Using pre-defined story (AI not available or failed)')
     }
 
     const sessionId = `${req.user.userId}-${Date.now()}`
@@ -95,8 +137,8 @@ Return strictly JSON with keys: storyText (string), recallQuestions (array of st
       userId: req.user.userId,
       storyText: storyObj.storyText,
       recallQuestions: storyObj.recallQuestions,
+      expectedKeywords: storyObj.expectedKeywords || null, // Store expected keywords for evaluation
       answers: [],
-      scores: [],
       finalReport: null,
       status: 'active',
       startTime: new Date()
@@ -109,43 +151,60 @@ Return strictly JSON with keys: storyText (string), recallQuestions (array of st
   }
 })
 
+// Simple keyword-based evaluation function (Correct/Wrong)
+function evaluateAnswerBasic(question, answer, questionIndex, expectedKeywords) {
+  const answerLower = answer.toLowerCase().trim()
+  
+  // Get expected keywords for this question
+  const keywords = expectedKeywords && expectedKeywords[questionIndex] ? expectedKeywords[questionIndex] : []
+  
+  // Check if any expected keyword is found in the answer
+  let isCorrect = false
+  if (keywords.length > 0) {
+    isCorrect = keywords.some(keyword => answerLower.includes(keyword.toLowerCase()))
+  } else {
+    // Fallback: if no keywords provided, use basic pattern matching
+    const questionLower = question.toLowerCase()
+    if (questionLower.includes('who') && (answerLower.includes('grandmother') || answerLower.includes('grandma'))) {
+      isCorrect = true
+    } else if (questionLower.includes('what day') && answerLower.includes('saturday')) {
+      isCorrect = true
+    } else if (questionLower.includes('what') && questionLower.includes('basket')) {
+      if (answerLower.includes('apple') || answerLower.includes('pie') || answerLower.includes('blueberry')) {
+        isCorrect = true
+      }
+    } else if (questionLower.includes('how long') && (answerLower.includes('forty') || answerLower.includes('40'))) {
+      isCorrect = true
+    } else if (questionLower.includes('where') && answerLower.includes('garden')) {
+      isCorrect = true
+    } else if (questionLower.includes('reading') && answerLower.includes('bird')) {
+      isCorrect = true
+    } else if (questionLower.includes('plant') && (answerLower.includes('rose') || answerLower.includes('bush'))) {
+      isCorrect = true
+    }
+  }
+  
+  return {
+    isCorrect,
+    feedback: isCorrect ? 'Correct answer!' : 'Incorrect answer. Please try to recall the story details.'
+  }
+}
+
 // POST /api/dementia/answer
 router.post('/answer', authenticateToken, async (req, res) => {
   try {
-    const { sessionId, question, answer } = req.body || {}
+    const { sessionId, question, answer, questionIndex } = req.body || {}
     const session = dementiaSessions.get(sessionId)
     if (!session || session.userId !== req.user.userId) return res.status(404).json({ error: 'Session not found' })
     if (!question || typeof answer !== 'string') return res.status(400).json({ error: 'question and answer are required' })
-    if (!genAI) return res.status(500).json({ error: 'AI service not configured' })
 
-    const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash', generationConfig: EVAL_CONFIG })
-    const evalPrompt = `Evaluate a patient's recall answer based on a narrated story.
-Return strictly JSON with keys: score (0-10), accuracy (high|medium|low), comprehension (good|moderate|poor), memoryRetention (strong|moderate|weak), communication (clear|unclear), feedback (string).
+    // Find the question index if not provided
+    const qIndex = questionIndex !== undefined ? questionIndex : session.recallQuestions.findIndex(q => q === question)
+    
+    // Use keyword-based evaluation
+    const evaluation = evaluateAnswerBasic(question, answer, qIndex, session.expectedKeywords)
 
-Story:\n${session.storyText}\n\nQuestion:\n${question}\n\nAnswer:\n${answer}`
-
-    let evaluation
-    try {
-      const r = await callAIWithTimeout(model.generateContent({ contents: [{ parts: [{ text: evalPrompt }] }] }))
-      const t = await r.response.text()
-      const m = t.match(/\{[\s\S]*\}/)
-      evaluation = m ? JSON.parse(m[0]) : null
-    } catch (_) {
-      evaluation = null
-    }
-    if (!evaluation || typeof evaluation.score !== 'number') {
-      evaluation = {
-        score: 7,
-        accuracy: 'medium',
-        comprehension: 'good',
-        memoryRetention: 'moderate',
-        communication: 'clear',
-        feedback: 'Reasonable recall with some omissions.'
-      }
-    }
-
-    session.answers.push({ question, answer, evaluation, timestamp: new Date() })
-    session.scores.push(Number(evaluation.score) || 0)
+    session.answers.push({ question, answer, evaluation, questionIndex: qIndex, timestamp: new Date() })
     dementiaSessions.set(sessionId, session)
     return res.json({ evaluation })
   } catch (err) {
@@ -178,25 +237,20 @@ router.get('/generate-report', authenticateToken, async (req, res) => {
     const session = dementiaSessions.get(sessionId)
     if (!session || session.userId !== req.user.userId) return res.status(404).json({ error: 'Session not found' })
 
-    const avg = session.scores.length ? session.scores.reduce((a, b) => a + b, 0) / session.scores.length : 0
+    const totalQuestions = session.recallQuestions.length
+    // Calculate correct answers from the answers array
+    const correctAnswers = session.answers.filter(a => a.evaluation && a.evaluation.isCorrect).length
+    const riskFreePercentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0
+
     const summary = {
-      averageScore: Number(avg.toFixed(2)),
-      totalAnswers: session.answers.length,
-      categories: session.answers.reduce((acc, a) => {
-        const e = a.evaluation || {}
-        acc.accuracy = acc.accuracy || { high: 0, medium: 0, low: 0 }
-        acc.comprehension = acc.comprehension || { good: 0, moderate: 0, poor: 0 }
-        acc.memoryRetention = acc.memoryRetention || { strong: 0, moderate: 0, weak: 0 }
-        acc.communication = acc.communication || { clear: 0, unclear: 0 }
-        if (e.accuracy) acc.accuracy[e.accuracy] = (acc.accuracy[e.accuracy] || 0) + 1
-        if (e.comprehension) acc.comprehension[e.comprehension] = (acc.comprehension[e.comprehension] || 0) + 1
-        if (e.memoryRetention) acc.memoryRetention[e.memoryRetention] = (acc.memoryRetention[e.memoryRetention] || 0) + 1
-        if (e.communication) acc.communication[e.communication] = (acc.communication[e.communication] || 0) + 1
-        return acc
-      }, {})
+      totalQuestions,
+      correctAnswers,
+      incorrectAnswers: totalQuestions - correctAnswers,
+      riskFreePercentage, // Percentage risk-free-from-dementia score
+      generatedAt: new Date().toISOString()
     }
 
-    const finalReport = { ...summary, generatedAt: new Date().toISOString() }
+    const finalReport = { ...summary }
     session.finalReport = finalReport
     dementiaSessions.set(sessionId, session)
     return res.json(finalReport)
@@ -212,6 +266,22 @@ router.get('/session/:sessionId', authenticateToken, (req, res) => {
   const session = dementiaSessions.get(sessionId)
   if (!session || session.userId !== req.user.userId) return res.status(404).json({ error: 'Session not found' })
   return res.json(session)
+})
+
+// GET /api/dementia/health - Check if Gemini API is configured
+router.get('/health', authenticateToken, (req, res) => {
+  const hasKey = !!process.env.GEMINI_API_KEY
+  const isInitialized = !!genAI
+  return res.json({
+    configured: hasKey && isInitialized,
+    hasApiKey: hasKey,
+    isInitialized: isInitialized,
+    message: hasKey && isInitialized 
+      ? 'Gemini API is properly configured' 
+      : hasKey 
+        ? 'Gemini API key found but initialization failed' 
+        : 'GEMINI_API_KEY not found in environment variables. Please add it to your .env file.'
+  })
 })
 
 module.exports = router

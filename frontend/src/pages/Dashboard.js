@@ -11,7 +11,8 @@ import {
   Activity,
   Target,
   Award,
-  RefreshCw
+  RefreshCw,
+  Mic
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -166,7 +167,7 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <Link
             to="/tests"
             className="group bg-white rounded-3xl p-6 shadow-soft hover:shadow-medium transition-all duration-300 transform hover:-translate-y-1 border-l-4 border-l-primary-500"
@@ -179,6 +180,20 @@ const Dashboard = () => {
             </div>
             <h3 className="text-lg font-semibold text-gray-900 mb-2">Take a Test</h3>
             <p className="text-gray-600 text-sm">Complete your scheduled cognitive assessment</p>
+          </Link>
+
+          <Link
+            to="/story-recall"
+            className="group bg-white rounded-3xl p-6 shadow-soft hover:shadow-medium transition-all duration-300 transform hover:-translate-y-1 border-l-4 border-l-indigo-500"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center">
+                <Mic className="w-6 h-6 text-indigo-600" />
+              </div>
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-indigo-600 transition-colors duration-300" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Start Story Test</h3>
+            <p className="text-gray-600 text-sm">Listen to a story and answer recall questions</p>
           </Link>
 
           <Link

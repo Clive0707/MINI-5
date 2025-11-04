@@ -1,3 +1,6 @@
+// Load environment variables FIRST before any other requires
+require('dotenv').config();
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -12,7 +15,6 @@ const User = require('./database/models/User');
 const CognitiveTest = require('./database/models/CognitiveTest');
 const RiskEvaluation = require('./database/models/RiskEvaluation');
 const TestSchedule = require('./database/models/TestSchedule');
-require('dotenv').config();
 
 // Initialize notification service for email notifications
 // require('./services/notificationService'); // Temporarily disabled to avoid conflicts

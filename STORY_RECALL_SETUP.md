@@ -10,7 +10,7 @@
    - `GET /api/dementia/session/:sessionId` - Get session details
 
 2. **Frontend Component**: Created `frontend/src/pages/StoryRecall.js` with:
-   - AI avatar video integration (plays when speaking)
+   - Microphone icon with animated ripple effects (displays during narration)
    - Text-to-Speech narration for story and questions
    - Voice recognition for patient answers
    - Text input fallback if voice recognition fails
@@ -39,20 +39,7 @@ GEMINI_API_KEY=your-actual-api-key-here
 3. Create a new API key
 4. Copy the key and paste it in your `.env` file
 
-### 2. Add AI Avatar Video
-
-Place your AI avatar video file at:
-```
-MINI-5/frontend/public/ai-avatar.mp4
-```
-
-**Recommended specs:**
-- Format: MP4
-- Size: Small file (preferably < 5MB)
-- Duration: 10-30 seconds (will loop)
-- Content: Neutral background, speaking avatar
-
-### 3. Restart Your Server
+### 2. Restart Your Server
 
 After adding the API key, restart your Node.js server:
 ```bash
@@ -68,16 +55,16 @@ npm run dev
 1. **User clicks "Start Story Test"**
    - Backend calls Gemini AI to generate a 10-sentence story + 5-7 recall questions
    - Story is displayed and narrated via Text-to-Speech
-   - AI avatar video plays while story is being narrated
+   - Microphone icon displays with animated ripple effects during narration
 
 2. **Story Narration**
    - Browser's TTS reads the story sentence by sentence
-   - Avatar video plays during speech
+   - Microphone icon shows ripple animation while speaking
    - User listens to the complete story
 
 3. **Question Phase**
    - After story, questions are asked one by one via TTS
-   - Avatar plays during questions
+   - Microphone icon animates during questions
    - Patient can answer via:
      - **Voice**: Click microphone button, speak answer
      - **Text**: Type answer manually
@@ -106,9 +93,6 @@ http://localhost:3000/story-recall
 
 **Problem**: "AI service not configured"
 - **Solution**: Make sure `GEMINI_API_KEY` is in your `.env` file and server is restarted
-
-**Problem**: Video not showing
-- **Solution**: Ensure `ai-avatar.mp4` exists in `frontend/public/` folder
 
 **Problem**: Voice recognition not working
 - **Solution**: 

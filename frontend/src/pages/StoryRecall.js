@@ -5,7 +5,6 @@ import toast from 'react-hot-toast';
 
 function StoryRecall() {
   const { user, token } = useAuth();
-  const videoRef = useRef(null);
   const recognitionRef = useRef(null);
   
   const [sessionId, setSessionId] = useState(null);
@@ -18,6 +17,10 @@ function StoryRecall() {
   const [finalReport, setFinalReport] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isSpeaking, setIsSpeaking] = useState(false);
+  const [isStoryVisible, setIsStoryVisible] = useState(false); // Hidden by default when narration starts
+  const [isPaused, setIsPaused] = useState(false);
+  const [remainingText, setRemainingText] = useState('');
+  const [narrationResolve, setNarrationResolve] = useState(null);
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -59,7 +62,7 @@ function StoryRecall() {
     };
   }, []);
 
-  // Text-to-Speech function with video sync
+  // Text-to-Speech function with pause/resume support
   const speakText = (text) => {
     return new Promise((resolve) => {
       if (!window.speechSynthesis) {
@@ -70,6 +73,7 @@ function StoryRecall() {
 
       // Cancel any ongoing speech
       window.speechSynthesis.cancel();
+      setIsPaused(false);
       
       // Split text into sentences for better control
       const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
@@ -78,12 +82,15 @@ function StoryRecall() {
       const speakSentence = () => {
         if (currentSentenceIndex >= sentences.length) {
           setIsSpeaking(false);
-          if (videoRef.current) {
-            videoRef.current.pause();
-          }
+          setIsPaused(false);
+          setRemainingText('');
           resolve();
           return;
         }
+
+        // Store remaining text for resume functionality
+        const remaining = sentences.slice(currentSentenceIndex).join('. ');
+        setRemainingText(remaining);
 
         const utterance = new SpeechSynthesisUtterance(sentences[currentSentenceIndex].trim());
         utterance.rate = 0.9;
@@ -92,30 +99,47 @@ function StoryRecall() {
 
         utterance.onstart = () => {
           setIsSpeaking(true);
-          if (videoRef.current) {
-            videoRef.current.play().catch(err => console.error('Video play error:', err));
-          }
+          setIsPaused(false);
         };
 
         utterance.onend = () => {
           currentSentenceIndex++;
-          setTimeout(() => speakSentence(), 200); // Small pause between sentences
+          if (!isPaused) {
+            setTimeout(() => speakSentence(), 200); // Small pause between sentences
+          }
         };
 
         utterance.onerror = (error) => {
           console.error('Speech synthesis error:', error);
           setIsSpeaking(false);
-          if (videoRef.current) {
-            videoRef.current.pause();
-          }
+          setIsPaused(false);
+          setRemainingText('');
           resolve();
         };
 
         window.speechSynthesis.speak(utterance);
       };
 
+      // Store resolve function for resume
+      setNarrationResolve(() => resolve);
       speakSentence();
     });
+  };
+
+  // Pause narration
+  const pauseNarration = () => {
+    if (window.speechSynthesis && isSpeaking && !isPaused) {
+      window.speechSynthesis.pause();
+      setIsPaused(true);
+    }
+  };
+
+  // Resume narration
+  const resumeNarration = () => {
+    if (window.speechSynthesis && isPaused) {
+      window.speechSynthesis.resume();
+      setIsPaused(false);
+    }
   };
 
   // Start story recall session
@@ -132,6 +156,7 @@ function StoryRecall() {
       setEvaluations([]);
       setFinalReport(null);
       setUserAnswer('');
+      setIsStoryVisible(false); // Hide story text by default when narration starts
       
       toast.success('Story session started! Listen carefully...');
       
@@ -143,7 +168,16 @@ function StoryRecall() {
       toast.success('Story complete! Get ready for questions.');
     } catch (error) {
       console.error('Error starting session:', error);
-      toast.error(error.response?.data?.error || 'Failed to start session');
+      const errorMessage = error.response?.data?.error || 'Failed to start session';
+      
+      if (errorMessage === 'AI service not configured') {
+        toast.error(
+          'AI service not configured. Please add GEMINI_API_KEY to your .env file and restart the server. See SETUP_GEMINI.md for details.',
+          { duration: 8000 }
+        );
+      } else {
+        toast.error(errorMessage);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -213,7 +247,8 @@ function StoryRecall() {
       const response = await api.post('/dementia/answer', {
         sessionId,
         question,
-        answer: userAnswer
+        answer: userAnswer,
+        questionIndex: currentQuestionIndex
       });
 
       const evaluation = response.data.evaluation;
@@ -223,7 +258,7 @@ function StoryRecall() {
         evaluation
       }]);
 
-      toast.success(`Answer submitted! Score: ${evaluation.score}/10`);
+      toast.success(`Answer submitted! ${evaluation.isCorrect ? 'Correct ✓' : 'Incorrect ✗'}`);
       
       // Move to next question
       const nextIndex = currentQuestionIndex + 1;
@@ -274,27 +309,36 @@ function StoryRecall() {
           <h1 className="text-3xl font-bold text-gray-800 mb-2">Story Recall Assessment</h1>
           <p className="text-gray-600 mb-6">Listen to the story carefully, then answer the recall questions.</p>
 
-          {/* AI Avatar Video */}
+          {/* Microphone Icon with Ripple Effects */}
           <div className="flex justify-center mb-6">
-            <div className="relative">
-              <video
-                ref={videoRef}
-                src="/ai-avatar.mp4"
-                className="w-80 h-80 object-cover rounded-lg shadow-lg border-4 border-blue-200"
-                muted
-                loop
-                playsInline
-                style={{ display: videoRef.current?.readyState >= 2 ? 'block' : 'none' }}
-              />
+            <div className="relative flex items-center justify-center">
+              {/* Ripple circles */}
               {isSpeaking && (
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="bg-blue-500 bg-opacity-20 rounded-full p-4 animate-pulse">
-                    <svg className="w-16 h-16 text-blue-600 animate-pulse" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                </div>
+                <>
+                  <div className="absolute w-32 h-32 bg-blue-400 rounded-full opacity-30 animate-ping"></div>
+                  <div className="absolute w-32 h-32 bg-blue-400 rounded-full opacity-20 animate-ping" style={{ animationDelay: '0.5s' }}></div>
+                  <div className="absolute w-32 h-32 bg-blue-400 rounded-full opacity-10 animate-ping" style={{ animationDelay: '1s' }}></div>
+                </>
               )}
+              
+              {/* Microphone icon */}
+              <div className={`relative z-10 bg-blue-100 rounded-full p-8 transition-all duration-300 ${
+                isSpeaking ? 'scale-110 shadow-2xl' : 'shadow-lg'
+              }`}>
+                <svg 
+                  className={`w-20 h-20 text-blue-600 transition-colors duration-300 ${
+                    isSpeaking ? 'text-blue-700' : ''
+                  }`} 
+                  fill="currentColor" 
+                  viewBox="0 0 20 20"
+                >
+                  <path 
+                    fillRule="evenodd" 
+                    d="M7 4a3 3 0 016 0v4a3 3 0 11-6 0V4zm4 10.93A7.001 7.001 0 0017 8a1 1 0 10-2 0A5 5 0 015 8a1 1 0 00-2 0 7.001 7.001 0 006 6.93V17H6a1 1 0 100 2h8a1 1 0 100-2h-3v-2.07z" 
+                    clipRule="evenodd" 
+                  />
+                </svg>
+              </div>
             </div>
           </div>
 
@@ -314,8 +358,50 @@ function StoryRecall() {
           {/* Story Display */}
           {storyText && (
             <div className="mt-6 p-6 bg-blue-50 rounded-lg border border-blue-200">
-              <h2 className="text-xl font-semibold text-gray-800 mb-3">📖 The Story</h2>
-              <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{storyText}</p>
+              <div className="flex items-center justify-between mb-3">
+                <h2 className="text-xl font-semibold text-gray-800">📖 The Story</h2>
+                <div className="flex items-center gap-2">
+                  {/* Play/Pause Controls */}
+                  {isSpeaking && (
+                    <>
+                      {isPaused ? (
+                        <button
+                          onClick={resumeNarration}
+                          className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                          </svg>
+                          Resume
+                        </button>
+                      ) : (
+                        <button
+                          onClick={pauseNarration}
+                          className="px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors flex items-center gap-2"
+                        >
+                          <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+                          </svg>
+                          Pause
+                        </button>
+                      )}
+                    </>
+                  )}
+                  <button
+                    onClick={() => setIsStoryVisible(!isStoryVisible)}
+                    className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    {isStoryVisible ? 'Hide Textual Story' : 'Show Textual Story'}
+                  </button>
+                </div>
+              </div>
+              {isStoryVisible ? (
+                <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{storyText}</p>
+              ) : (
+                <div className="text-center py-8 text-gray-500 italic">
+                  Story text is hidden. Listen to the narration, or click "Show Textual Story" to view the text.
+                </div>
+              )}
             </div>
           )}
 
@@ -400,53 +486,16 @@ function StoryRecall() {
                   <div key={idx} className="p-5 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-start justify-between mb-2">
                       <h4 className="font-semibold text-gray-800">Question {idx + 1}</h4>
-                      <span className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                        evalItem.evaluation.score >= 8 ? 'bg-green-100 text-green-800' :
-                        evalItem.evaluation.score >= 6 ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
+                      <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
+                        evalItem.evaluation.isCorrect 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
                       }`}>
-                        Score: {evalItem.evaluation.score}/10
+                        {evalItem.evaluation.isCorrect ? '✓ Correct' : '✗ Wrong'}
                       </span>
                     </div>
                     <p className="text-gray-700 mb-2"><strong>Q:</strong> {evalItem.question}</p>
                     <p className="text-gray-600 mb-3"><strong>A:</strong> {evalItem.answer}</p>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mb-3 text-sm">
-                      <div className="bg-white p-2 rounded">
-                        <span className="text-gray-600">Accuracy:</span>
-                        <span className={`ml-2 font-semibold ${
-                          evalItem.evaluation.accuracy === 'high' ? 'text-green-600' :
-                          evalItem.evaluation.accuracy === 'medium' ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {evalItem.evaluation.accuracy}
-                        </span>
-                      </div>
-                      <div className="bg-white p-2 rounded">
-                        <span className="text-gray-600">Comprehension:</span>
-                        <span className={`ml-2 font-semibold ${
-                          evalItem.evaluation.comprehension === 'good' ? 'text-green-600' :
-                          evalItem.evaluation.comprehension === 'moderate' ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {evalItem.evaluation.comprehension}
-                        </span>
-                      </div>
-                      <div className="bg-white p-2 rounded">
-                        <span className="text-gray-600">Memory:</span>
-                        <span className={`ml-2 font-semibold ${
-                          evalItem.evaluation.memoryRetention === 'strong' ? 'text-green-600' :
-                          evalItem.evaluation.memoryRetention === 'moderate' ? 'text-yellow-600' : 'text-red-600'
-                        }`}>
-                          {evalItem.evaluation.memoryRetention}
-                        </span>
-                      </div>
-                      <div className="bg-white p-2 rounded">
-                        <span className="text-gray-600">Communication:</span>
-                        <span className={`ml-2 font-semibold ${
-                          evalItem.evaluation.communication === 'clear' ? 'text-green-600' : 'text-red-600'
-                        }`}>
-                          {evalItem.evaluation.communication}
-                        </span>
-                      </div>
-                    </div>
                     <p className="text-sm text-gray-700 italic border-t pt-2 mt-2">
                       {evalItem.evaluation.feedback}
                     </p>
@@ -460,38 +509,44 @@ function StoryRecall() {
           {finalReport && (
             <div className="mt-8 p-6 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg border-2 border-blue-300">
               <h2 className="text-2xl font-bold text-gray-800 mb-4">📈 Final Assessment Report</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="bg-white p-4 rounded-lg">
-                  <p className="text-gray-600">Average Score</p>
-                  <p className="text-3xl font-bold text-blue-600">{finalReport.averageScore.toFixed(1)}/10</p>
+                  <p className="text-gray-600 mb-2">Risk-Free Score</p>
+                  <p className={`text-4xl font-bold ${
+                    finalReport.riskFreePercentage >= 80 ? 'text-green-600' :
+                    finalReport.riskFreePercentage >= 60 ? 'text-yellow-600' :
+                    'text-red-600'
+                  }`}>
+                    {finalReport.riskFreePercentage}%
+                  </p>
+                  <p className="text-sm text-gray-500 mt-1">Risk-Free from Dementia</p>
                 </div>
                 <div className="bg-white p-4 rounded-lg">
-                  <p className="text-gray-600">Total Questions</p>
-                  <p className="text-3xl font-bold text-blue-600">{finalReport.totalAnswers}</p>
+                  <p className="text-gray-600 mb-2">Correct Answers</p>
+                  <p className="text-3xl font-bold text-green-600">{finalReport.correctAnswers}/{finalReport.totalQuestions}</p>
+                </div>
+                <div className="bg-white p-4 rounded-lg">
+                  <p className="text-gray-600 mb-2">Incorrect Answers</p>
+                  <p className="text-3xl font-bold text-red-600">{finalReport.incorrectAnswers}/{finalReport.totalQuestions}</p>
                 </div>
               </div>
               
-              {finalReport.categories && (
-                <div className="bg-white p-4 rounded-lg mb-4">
-                  <h3 className="font-semibold text-gray-800 mb-2">Category Breakdown</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                    {Object.entries(finalReport.categories).map(([key, value]) => (
-                      <div key={key}>
-                        <p className="font-medium text-gray-700 capitalize mb-1">{key.replace(/([A-Z])/g, ' $1').trim()}</p>
-                        {typeof value === 'object' ? (
-                          <ul className="text-gray-600 space-y-1">
-                            {Object.entries(value).map(([k, v]) => (
-                              <li key={k}>{k}: {v}</li>
-                            ))}
-                          </ul>
-                        ) : (
-                          <p className="text-gray-600">{value}</p>
-                        )}
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <div className="bg-white p-4 rounded-lg mb-4">
+                <h3 className="font-semibold text-gray-800 mb-2">Summary</h3>
+                <p className="text-gray-700">
+                  You answered <strong>{finalReport.correctAnswers} out of {finalReport.totalQuestions}</strong> questions correctly.
+                  This corresponds to a <strong>{finalReport.riskFreePercentage}%</strong> risk-free-from-dementia score.
+                </p>
+                {finalReport.riskFreePercentage >= 80 && (
+                  <p className="text-green-700 font-medium mt-2">✓ Excellent memory recall performance!</p>
+                )}
+                {finalReport.riskFreePercentage >= 60 && finalReport.riskFreePercentage < 80 && (
+                  <p className="text-yellow-700 font-medium mt-2">⚠️ Good memory recall, but there's room for improvement.</p>
+                )}
+                {finalReport.riskFreePercentage < 60 && (
+                  <p className="text-red-700 font-medium mt-2">⚠️ Consider consulting with a healthcare professional for further assessment.</p>
+                )}
+              </div>
               
               <button
                 onClick={() => {
