@@ -17,6 +17,8 @@ import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import { XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Area, AreaChart } from 'recharts';
 import notificationService from '../services/notificationService';
+import { generateReport } from '../utils/generateReport';
+import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -61,6 +63,29 @@ const Dashboard = () => {
 
     return unsubscribe;
   }, []);
+
+  const handleGenerateReport = async () => {
+    try {
+      toast.loading('Generating report...', { id: 'report' });
+      
+      // Fetch all test results
+      const response = await api.get('/results?limit=100');
+      const testResults = response.data?.results || [];
+      
+      if (testResults.length === 0) {
+        toast.error('No test results found. Please complete some tests first.', { id: 'report' });
+        return;
+      }
+      
+      // Generate the PDF report
+      const filename = generateReport(user, testResults);
+      
+      toast.success(`Report generated: ${filename}`, { id: 'report' });
+    } catch (error) {
+      console.error('Error generating report:', error);
+      toast.error('Failed to generate report. Please try again.', { id: 'report' });
+    }
+  };
 
   const fetchDashboardData = async () => {
     try {
@@ -218,9 +243,12 @@ const Dashboard = () => {
             <div className="bg-white rounded-3xl p-8 shadow-soft">
               <div className="flex items-center justify-between mb-6">
                 <h2 className="text-2xl font-display font-bold text-gray-900">Performance Overview</h2>
-                <Link to="/reports" className="text-primary-600 hover:text-primary-700 font-medium text-sm">
+                <button
+                  onClick={handleGenerateReport}
+                  className="text-primary-600 hover:text-primary-700 font-medium text-sm flex items-center gap-1 transition-colors"
+                >
                   View Full Report →
-                </Link>
+                </button>
               </div>
               
               {dashboardData.recent_tests && dashboardData.recent_tests.length > 0 ? (

@@ -237,10 +237,21 @@ router.get('/generate-report', authenticateToken, async (req, res) => {
     const session = dementiaSessions.get(sessionId)
     if (!session || session.userId !== req.user.userId) return res.status(404).json({ error: 'Session not found' })
 
-    const totalQuestions = session.recallQuestions.length
+    // Get total number of questions from the session
+    const totalQuestions = session.recallQuestions ? session.recallQuestions.length : 0
+    
+    if (totalQuestions === 0) {
+      return res.status(400).json({ error: 'No questions found in session' })
+    }
+    
     // Calculate correct answers from the answers array
-    const correctAnswers = session.answers.filter(a => a.evaluation && a.evaluation.isCorrect).length
-    const riskFreePercentage = totalQuestions > 0 ? Math.round((correctAnswers / totalQuestions) * 100) : 0
+    const correctAnswers = session.answers ? session.answers.filter(a => a.evaluation && a.evaluation.isCorrect).length : 0
+    
+    // Calculate score using the correct formula: (correctAnswers / totalQuestions) * 100
+    const score = totalQuestions > 0 ? ((correctAnswers / totalQuestions) * 100) : 0
+    const riskFreePercentage = Math.min(100, Number(score.toFixed(2)))
+    
+    console.log(`📊 Story Test Score Calculation: ${correctAnswers} correct out of ${totalQuestions} total = ${riskFreePercentage}%`)
 
     const summary = {
       totalQuestions,

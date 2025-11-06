@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import notificationService from '../services/notificationService';
 
 function StoryRecall() {
   const { user, token } = useAuth();
+  const navigate = useNavigate();
   const recognitionRef = useRef(null);
   
   const [sessionId, setSessionId] = useState(null);
@@ -277,7 +280,7 @@ function StoryRecall() {
     }
   };
 
-  // Generate final report
+  // Generate final report and save to backend
   const generateReport = async () => {
     try {
       setIsLoading(true);
@@ -285,8 +288,56 @@ function StoryRecall() {
         params: { sessionId }
       });
       
-      setFinalReport(response.data);
+      const reportData = response.data;
+      setFinalReport(reportData);
       setCurrentQuestionIndex(-1);
+      
+      // Save the test result to the backend
+      try {
+        // Convert riskFreePercentage (0-100) to 0-10 scale score
+        const normalizedScore = (reportData.riskFreePercentage / 100) * 10;
+        
+        // Determine performance level
+        let performanceLevel = 'Low';
+        if (reportData.riskFreePercentage >= 80) {
+          performanceLevel = 'High';
+        } else if (reportData.riskFreePercentage >= 60) {
+          performanceLevel = 'Moderate';
+        }
+        
+        // Save to backend via /api/results endpoint
+        const saveResponse = await api.post('/results', {
+          userId: user?.id,
+          testTypeId: 'story_recall',
+          score: normalizedScore,
+          performanceLevel: performanceLevel,
+          completionDate: new Date().toISOString(),
+          metadata: {
+            totalQuestions: reportData.totalQuestions,
+            correctAnswers: reportData.correctAnswers,
+            incorrectAnswers: reportData.incorrectAnswers,
+            riskFreePercentage: reportData.riskFreePercentage,
+            sessionId: sessionId
+          }
+        });
+        
+        if (saveResponse.data?.result) {
+          // Trigger dashboard refresh notification
+          notificationService.notifyTestSaved({
+            test_type: 'story_recall',
+            score: normalizedScore,
+            max_score: 10,
+            percentage: reportData.riskFreePercentage,
+            ...saveResponse.data.result
+          });
+          
+          toast.success('Test results saved successfully!');
+        }
+      } catch (saveError) {
+        console.error('Error saving test result:', saveError);
+        toast.error('Failed to save test result, but report is available below.');
+      }
+      
       toast.success('Report generated! Check results below.');
     } catch (error) {
       console.error('Error generating report:', error);
@@ -548,20 +599,30 @@ function StoryRecall() {
                 )}
               </div>
               
-              <button
-                onClick={() => {
-                  setSessionId(null);
-                  setStoryText('');
-                  setQuestions([]);
-                  setCurrentQuestionIndex(-1);
-                  setEvaluations([]);
-                  setFinalReport(null);
-                  setUserAnswer('');
-                }}
-                className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
-              >
-                Start New Test
-              </button>
+              <div className="flex gap-4 mt-4">
+                <button
+                  onClick={() => {
+                    navigate('/dashboard');
+                  }}
+                  className="px-6 py-2 bg-green-600 text-white rounded-lg font-semibold hover:bg-green-700 transition-colors"
+                >
+                  View Dashboard
+                </button>
+                <button
+                  onClick={() => {
+                    setSessionId(null);
+                    setStoryText('');
+                    setQuestions([]);
+                    setCurrentQuestionIndex(-1);
+                    setEvaluations([]);
+                    setFinalReport(null);
+                    setUserAnswer('');
+                  }}
+                  className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
+                >
+                  Start New Test
+                </button>
+              </div>
             </div>
           )}
         </div>
