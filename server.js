@@ -1,6 +1,12 @@
 // Load environment variables FIRST before any other requires
 require('dotenv').config();
 
+// Handle clean shutdowns
+process.on("SIGINT", () => {
+  console.log("🛑 Gracefully shutting down server...");
+  process.exit();
+});
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');

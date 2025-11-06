@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Brain, Clock, BarChart3, Play, Calendar, Target, TrendingUp, Award, Zap } from 'lucide-react';
+import { Brain, Clock, BarChart3, Play, Calendar, Target, TrendingUp, Award, Zap, Mic } from 'lucide-react';
 // import { useAuth } from '../contexts/AuthContext';
 import { TestScheduler } from '../components/tests/Tests';
 
@@ -37,6 +37,16 @@ const Tests = () => {
       icon: TrendingUp,
       color: 'accent',
       features: ['Logical reasoning', 'Pattern analysis', 'Executive function']
+    },
+    {
+      id: 'story_recall',
+      name: 'Wechsler Logical Memory Test',
+      description: 'Listen to a story and answer recall questions to assess your logical memory and narrative comprehension.',
+      difficulty: 'Medium',
+      duration: '10-15 min',
+      icon: Mic,
+      color: 'primary',
+      features: ['Logical memory', 'Narrative recall', 'Comprehension']
     }
   ];
 
@@ -176,7 +186,7 @@ const Tests = () => {
 
                   {/* Action Button */}
                   <Link
-                    to={`/test/${test.id}`}
+                    to={test.id === 'story_recall' ? '/story-recall' : `/test/${test.id}`}
                     className={`block w-full text-center py-3 px-6 bg-gradient-to-r ${getColorClasses(test.color)} text-white font-semibold rounded-2xl shadow-soft hover:shadow-medium transition-all duration-300 transform hover:-translate-y-1 group-hover:scale-105`}
                   >
                     <div className="flex items-center justify-center">
