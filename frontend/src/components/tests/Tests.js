@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, Brain, ArrowLeft, TrendingUp, Award, Play, Target, Calendar, Plus, Trash2, Edit, X } from 'lucide-react';
 import api from '../../services/api';
@@ -239,7 +239,9 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
         {/* Test Content */}
         <div className="pt-20 pb-8">
           <div className="max-w-4xl mx-auto px-4">
-            {React.cloneElement(children, { onTestComplete: completeTest })}
+            {typeof children === 'function' 
+              ? children({ onTestComplete: completeTest })
+              : React.cloneElement(children, { onTestComplete: completeTest })}
             <div className="mt-8 flex justify-center">
               <button
                 onClick={() => { /* explicit complete button; child still controls scoring */ completeTest({ finalScore: 0, metadata: {} }); }}
@@ -384,7 +386,7 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
     </div>
   );
 
-  const handleAnswerSelect = (selectedAnswer) => {
+  const handleAnswerSelect = (selectedAnswer, onTestComplete) => {
     const currentTrialData = trials[currentTrial];
     const isCorrect = selectedAnswer === currentTrialData.correctAnswer;
     
@@ -427,6 +429,9 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
     }, feedbackTime * 1000);
   };
 
+  // Store onTestComplete in a ref so timer effect can access it
+  const onTestCompleteRef = useRef(null);
+  
   // Timer effect
   useEffect(() => {
     if (currentTrial < trials.length && !showFeedback) {
@@ -453,8 +458,8 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
               // Test complete
               const correct = score;
               const finalScore = Number(((correct / trials.length) * 10).toFixed(2));
-              if (onTestComplete) {
-                onTestComplete({
+              if (onTestCompleteRef.current) {
+                onTestCompleteRef.current({
                   finalScore,
                   metadata: {
                     totalTrials: trials.length,
@@ -469,7 +474,7 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
 
       return () => clearTimeout(timer);
     }
-  }, [currentTrial, timeLeft, showFeedback, trials, score, onTestComplete]);
+  }, [currentTrial, timeLeft, showFeedback, trials, score, trialTime, feedbackTime]);
 
   // Initialize first trial
   useEffect(() => {
@@ -478,8 +483,11 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
     }
   }, [currentTrial, timeLeft, trialTime]);
 
-  const renderTrial = () => {
+  const renderTrial = (onTestComplete) => {
     if (currentTrial >= trials.length) return null;
+    
+    // Update ref when onTestComplete changes
+    onTestCompleteRef.current = onTestComplete;
     
     const trial = trials[currentTrial];
     
@@ -514,7 +522,7 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
           {trial.options.map((option) => (
             <button
               key={option}
-              onClick={() => handleAnswerSelect(option)}
+              onClick={() => handleAnswerSelect(option, onTestComplete)}
               disabled={showFeedback}
               className={`btn btn-lg py-4 text-lg font-semibold font-mono transition-all ${
                 showFeedback && userAnswer === option
@@ -559,7 +567,7 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
       maxScore={10}
       timeLimit={Math.ceil((trials.length * trialTime) / 60)}
     >
-      {renderTrial()}
+      {({ onTestComplete }) => renderTrial(onTestComplete)}
     </BaseTest>
   );
 };
@@ -587,10 +595,11 @@ const StroopTest = ({ onTestComplete }) => {
       { word: 'GREEN', color: 'red', correctAnswer: 'red' },
       { word: 'YELLOW', color: 'blue', correctAnswer: 'blue' },
       { word: 'RED', color: 'yellow', correctAnswer: 'yellow' },
-      { word: 'BLUE', color: 'green', correctAnswer: 'green' }
+      { word: 'BLUE', color: 'green', correctAnswer: 'green' },
     ];
-    // Repeat to reach ~30 trials
-    return [...base, ...base, ...base];
+
+    // Randomize order
+    return base.sort(() => Math.random() - 0.5);
   }, []);
 
   const trialTime = 5; // seconds per trial
@@ -642,7 +651,7 @@ const StroopTest = ({ onTestComplete }) => {
     return { color: colorMap[color] };
   };
 
-  const handleColorSelect = (selectedColor) => {
+  const handleColorSelect = (selectedColor, onTestComplete) => {
     const currentTrialData = trials[currentTrial];
     const isCorrect = selectedColor === currentTrialData.correctAnswer;
     const rt = trialStartTs ? (Date.now() - trialStartTs) / 1000 : null;
@@ -674,6 +683,7 @@ const StroopTest = ({ onTestComplete }) => {
         const basePercent = (correct / total) * 100;
         const avgRT = responseTimes.length > 0 ? (responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) : (rt || 0);
         const penalty = avgRT > 2 ? Math.min(20, (avgRT - 2) * 10) : 0; // up to -20%
+        const accuracyPercent = basePercent;
         const finalPercent = Math.max(0, Math.min(100, basePercent - penalty));
         const finalScore = Number(((finalPercent / 100) * 10).toFixed(2));
         if (onTestComplete) {
@@ -683,10 +693,9 @@ const StroopTest = ({ onTestComplete }) => {
               totalTrials: total,
               correctResponses: correct,
               avgResponseTimeSeconds: avgRT,
-              responseTimes,
-              basePercent,
               penaltyPercent: penalty,
-              finalPercent
+              accuracyPercent,
+              finalPercent,
             }
           });
         }
@@ -694,6 +703,9 @@ const StroopTest = ({ onTestComplete }) => {
     }, feedbackTime * 1000);
   };
 
+  // Store onTestComplete in a ref so timer effect can access it
+  const onTestCompleteRef = useRef(null);
+  
   // Timer effect
   useEffect(() => {
     if (currentTrial < trials.length && !showFeedback) {
@@ -723,19 +735,19 @@ const StroopTest = ({ onTestComplete }) => {
               const basePercent = (correct / total) * 100;
               const avgRT = responseTimes.length > 0 ? (responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length) : 0;
               const penalty = avgRT > 2 ? Math.min(20, (avgRT - 2) * 10) : 0;
+              const accuracyPercent = basePercent;
               const finalPercent = Math.max(0, Math.min(100, basePercent - penalty));
               const finalScore = Number(((finalPercent / 100) * 10).toFixed(2));
-              if (onTestComplete) {
-                onTestComplete({
+              if (onTestCompleteRef.current) {
+                onTestCompleteRef.current({
                   finalScore,
                   metadata: {
                     totalTrials: total,
                     correctResponses: correct,
                     avgResponseTimeSeconds: avgRT,
-                    responseTimes,
-                    basePercent,
                     penaltyPercent: penalty,
-                    finalPercent
+                    accuracyPercent,
+                    finalPercent,
                   }
                 });
               }
@@ -746,7 +758,7 @@ const StroopTest = ({ onTestComplete }) => {
 
       return () => clearTimeout(timer);
     }
-  }, [currentTrial, timeLeft, showFeedback, trials, correctCount, responseTimes, onTestComplete]);
+  }, [currentTrial, timeLeft, showFeedback, trials, correctCount, responseTimes, trialTime, feedbackTime]);
 
   // Initialize first trial
   useEffect(() => {
@@ -756,8 +768,11 @@ const StroopTest = ({ onTestComplete }) => {
     }
   }, [currentTrial, timeLeft, trialTime]);
 
-  const renderTrial = () => {
+  const renderTrial = (onTestComplete) => {
     if (currentTrial >= trials.length) return null;
+    
+    // Update ref when onTestComplete changes
+    onTestCompleteRef.current = onTestComplete;
     
     const trial = trials[currentTrial];
     
@@ -786,7 +801,7 @@ const StroopTest = ({ onTestComplete }) => {
           {colors.map((color) => (
             <button
               key={color}
-              onClick={() => handleColorSelect(color)}
+              onClick={() => handleColorSelect(color, onTestComplete)}
               disabled={showFeedback}
               className={`btn btn-lg py-4 text-lg font-semibold capitalize transition-all ${
                 showFeedback && userAnswer === color
@@ -831,7 +846,7 @@ const StroopTest = ({ onTestComplete }) => {
       maxScore={10}
       timeLimit={Math.ceil((trials.length * trialTime) / 60)}
     >
-      {renderTrial()}
+      {({ onTestComplete }) => renderTrial(onTestComplete)}
     </BaseTest>
   );
 };
@@ -893,40 +908,66 @@ const WordRecallTest = ({ onTestComplete }) => {
     setUserInputs(newInputs);
   };
 
-  const calculateScore = useCallback(() => {
-    let correctWords = 0;
-    const userWords = userInputs.map(input => input.trim().toLowerCase());
-    const uniqueCorrect = new Set();
-    words.forEach(word => {
-      const wordLower = word.toLowerCase();
-      // Check for exact matches or close matches (allowing for typos)
-      const matched = userWords.some(userWord => 
-        userWord === wordLower ||
-        userWord.includes(wordLower) || wordLower.includes(userWord) ||
-        (userWord.length > 3 && wordLower.length > 3 && userWord.slice(0, 3) === wordLower.slice(0, 3))
-      );
-      if (matched) uniqueCorrect.add(wordLower);
-    });
-    correctWords = uniqueCorrect.size;
+  // --- Updated scoring logic for Word Recall Test ---
+  const calculateScore = useCallback((inputs) => {
+    if (!inputs || inputs.length === 0) return { finalScore: 0, correctWords: 0 };
 
-    // Calculate score on 0-10 scale
-    const percentage = (correctWords / words.length) * 100;
+    const correctWords = words.map(w => w.toLowerCase());
+    const recalledWords = inputs
+      .map(input => input.trim().toLowerCase())
+      .filter(Boolean); // remove empty inputs
+
+    let matchedCount = 0;
+    const matchedSet = new Set();
+
+    for (const recalled of recalledWords) {
+      for (const correct of correctWords) {
+        if (
+          recalled === correct ||
+          recalled.startsWith(correct.slice(0, 3)) ||
+          correct.startsWith(recalled.slice(0, 3))
+        ) {
+          if (!matchedSet.has(correct)) {
+            matchedSet.add(correct);
+            matchedCount++;
+          }
+          break;
+        }
+      }
+    }
+
+    const percentage = (matchedCount / correctWords.length) * 100;
     const finalScore = Number(((percentage / 100) * 10).toFixed(2));
-    return { finalScore, correctWords };
-  }, [userInputs, words]);
 
-  const handleRecallComplete = useCallback(() => {
-    const { finalScore, correctWords } = calculateScore();
+    return { finalScore, correctWords: matchedCount };
+  }, [words]);
+
+  const handleRecallComplete = (onTestComplete) => {
+    const correctWords = words.map(w => w.toLowerCase());
+    const recalled = userInputs.map(i => i.trim().toLowerCase()).filter(Boolean);
+    const matched = new Set();
+
+    for (const rec of recalled) {
+      for (const cor of correctWords) {
+        if (rec === cor || rec.startsWith(cor.slice(0, 3)) || cor.startsWith(rec.slice(0, 3))) {
+          matched.add(cor);
+          break;
+        }
+      }
+    }
+
+    const correctCount = matched.size;
+    const score = Number(((correctCount / words.length) * 10).toFixed(2));
+
+    console.log("✅ Recall Done:", { correctCount, score });
+
     if (onTestComplete) {
       onTestComplete({
-        finalScore,
-        metadata: {
-          totalTrials: words.length,
-          correctResponses: correctWords,
-        }
+        finalScore: score,
+        metadata: { totalTrials: words.length, correctResponses: correctCount }
       });
     }
-  }, [calculateScore, onTestComplete, words.length]);
+  };
 
   // Timer effects
   useEffect(() => {
@@ -1006,7 +1047,7 @@ const WordRecallTest = ({ onTestComplete }) => {
     </div>
   );
 
-  const renderRecallPhase = () => (
+  const renderRecallPhase = (onTestComplete) => (
     <div>
       <div className="text-center mb-8">
         <h3 className="text-2xl font-semibold text-gray-900 mb-4">
@@ -1016,7 +1057,7 @@ const WordRecallTest = ({ onTestComplete }) => {
           Type as many words as you can remember from the study phase.
         </p>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
         {words.map((word, index) => (
           <div key={index} className="space-y-2">
@@ -1025,19 +1066,18 @@ const WordRecallTest = ({ onTestComplete }) => {
             </label>
             <input
               type="text"
-              value={userInputs[index] || ''}
+              value={userInputs[index] || ""}
               onChange={(e) => handleWordInput(index, e.target.value)}
               className="input w-full"
               placeholder="Type the word you remember..."
-              autoFocus={index === 0}
             />
           </div>
         ))}
       </div>
-      
+
       <div className="text-center">
         <button
-          onClick={handleRecallComplete}
+          onClick={() => handleRecallComplete(onTestComplete)}
           className="btn btn-primary btn-lg px-8 py-4 text-lg font-semibold"
         >
           ✅ Complete Recall
@@ -1045,19 +1085,6 @@ const WordRecallTest = ({ onTestComplete }) => {
       </div>
     </div>
   );
-
-  const renderTestContent = () => {
-    switch (currentPhase) {
-      case 'study':
-        return renderStudyPhase();
-      case 'delay':
-        return renderDelayPhase();
-      case 'recall':
-        return renderRecallPhase();
-      default:
-        return null;
-    }
-  };
 
   return (
     <BaseTest
@@ -1067,7 +1094,13 @@ const WordRecallTest = ({ onTestComplete }) => {
       maxScore={10}
       timeLimit={Math.ceil((words.length * studyTime + delayTime) / 60)}
     >
-      {renderTestContent()}
+      {({ onTestComplete }) => (
+        <>
+          {currentPhase === "study" && renderStudyPhase()}
+          {currentPhase === "delay" && renderDelayPhase()}
+          {currentPhase === "recall" && renderRecallPhase(onTestComplete)}
+        </>
+      )}
     </BaseTest>
   );
 };

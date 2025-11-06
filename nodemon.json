@@ -1,0 +1,11 @@
+{
+  "watch": ["server.js", "routes", "controllers", "models", "config"],
+  "ignore": ["node_modules", "frontend", "package-lock.json"],
+  "execMap": {
+    "js": "node --trace-warnings"
+  },
+  "events": {
+    "restart": "npx kill-port 5000"
+  },
+  "delay": "500"
+}
