@@ -11,13 +11,13 @@ import { useAuth } from '../../contexts/AuthContext';
 const BaseTest = ({ testType, testName, instructions, children, onTestComplete, maxScore = 10, timeLimit = null }) => {
   const [currentStep, setCurrentStep] = useState('instructions'); // instructions, test, results
   const [startTime, setStartTime] = useState(null);
-  const [endTime, setEndTime] = useState(null);
   const [testResult, setTestResult] = useState(null);
   const [submitting, setSubmitting] = useState(false);
   const navigate = useNavigate();
   const { user } = useAuth();
   const [pendingMetadata, setPendingMetadata] = useState(null);
   const [riskData, setRiskData] = useState(null);
+  const [baselineComparison, setBaselineComparison] = useState(null);
 
   const startTest = useCallback(() => {
     setCurrentStep('test');
@@ -25,7 +25,6 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
   }, []);
 
   const completeTest = useCallback((finalScoreOrPayload) => {
-    setEndTime(new Date());
     let finalScore = typeof finalScoreOrPayload === 'number' ? finalScoreOrPayload : finalScoreOrPayload?.finalScore;
     const metadata = typeof finalScoreOrPayload === 'object' ? (finalScoreOrPayload?.metadata || null) : null;
     if (metadata) setPendingMetadata(metadata);
@@ -113,6 +112,7 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
         });
       }
       notificationService.notifyTestSaved(response.data.result);
+      setBaselineComparison(response.data?.baselineComparison ?? null);
       navigate('/dashboard');
     } catch (error) {
       const message = error.response?.data?.error || error.message || 'Failed to save results';
@@ -125,7 +125,6 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
   const retakeTest = () => {
     setCurrentStep('instructions');
     setStartTime(null);
-    setEndTime(null);
     setTestResult(null);
     setPendingMetadata(null);
     setRiskData(null);
@@ -267,6 +266,7 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
         onReturnWithoutSaving={() => navigate('/dashboard')}
         saving={submitting}
         riskData={riskData}
+        baselineComparison={baselineComparison}
         testName={testName}
         maxScore={maxScore}
       />
@@ -900,47 +900,13 @@ const WordRecallTest = ({ onTestComplete }) => {
   const startRecallPhase = useCallback(() => {
     setCurrentPhase('recall');
     setUserInputs(new Array(words.length).fill(''));
-  }, []);
+  }, [words.length]);
 
   const handleWordInput = (index, value) => {
     const newInputs = [...userInputs];
     newInputs[index] = value;
     setUserInputs(newInputs);
   };
-
-  // --- Updated scoring logic for Word Recall Test ---
-  const calculateScore = useCallback((inputs) => {
-    if (!inputs || inputs.length === 0) return { finalScore: 0, correctWords: 0 };
-
-    const correctWords = words.map(w => w.toLowerCase());
-    const recalledWords = inputs
-      .map(input => input.trim().toLowerCase())
-      .filter(Boolean); // remove empty inputs
-
-    let matchedCount = 0;
-    const matchedSet = new Set();
-
-    for (const recalled of recalledWords) {
-      for (const correct of correctWords) {
-        if (
-          recalled === correct ||
-          recalled.startsWith(correct.slice(0, 3)) ||
-          correct.startsWith(recalled.slice(0, 3))
-        ) {
-          if (!matchedSet.has(correct)) {
-            matchedSet.add(correct);
-            matchedCount++;
-          }
-          break;
-        }
-      }
-    }
-
-    const percentage = (matchedCount / correctWords.length) * 100;
-    const finalScore = Number(((percentage / 100) * 10).toFixed(2));
-
-    return { finalScore, correctWords: matchedCount };
-  }, [words]);
 
   const handleRecallComplete = (onTestComplete) => {
     const correctWords = words.map(w => w.toLowerCase());

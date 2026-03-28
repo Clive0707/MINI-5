@@ -22,6 +22,9 @@ const CognitiveTest = require('./database/models/CognitiveTest');
 const RiskEvaluation = require('./database/models/RiskEvaluation');
 const TestSchedule = require('./database/models/TestSchedule');
 
+// Initialize reminder service for email reminders
+const reminderService = require('./services/reminderService');
+
 // Initialize notification service for email notifications
 // require('./services/notificationService'); // Temporarily disabled to avoid conflicts
 
@@ -69,6 +72,10 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString()
   });
 });
+
+// Mount AI assistant routes
+const aiRoutes = require('./routes/api/ai');
+app.use('/api/ai', aiRoutes);
 
 // Mount dementia routes
 app.use('/api/dementia', dementiaRoutes);
@@ -129,7 +136,14 @@ app.post('/api/auth/register', async (req, res) => {
       age,
       gender,
       family_history: family_history || '',
-      medical_conditions: medical_conditions || ''
+      medical_conditions: medical_conditions || '',
+      baselineScores: {},
+      baselineCompleted: false,
+      baselineDate: null,
+      reminderEnabled: false,
+      reminderTime: '',
+      lastReminderSentAt: null,
+      preferredLanguage: 'en'
     });
 
     const token = jwt.sign(
@@ -141,7 +155,22 @@ app.post('/api/auth/register', async (req, res) => {
     res.status(201).json({
       message: 'User created successfully',
       token,
-      user: { id: userDoc._id.toString(), email, first_name, last_name, age, gender, family_history, medical_conditions }
+      user: {
+        id: userDoc._id.toString(),
+        email,
+        first_name,
+        last_name,
+        age,
+        gender,
+        family_history,
+        medical_conditions,
+        baselineCompleted: false,
+        baselineScores: {},
+        baselineDate: null,
+        reminderEnabled: false,
+        reminderTime: '',
+        preferredLanguage: 'en'
+      }
     });
   } catch (error) {
     console.error('Registration error:', error);
@@ -188,8 +217,20 @@ app.post('/api/auth/login', async (req, res) => {
       message: 'Login successful',
       token,
       user: {
-        id: user._id.toString(), email: user.email, first_name: user.first_name, last_name: user.last_name,
-        age: user.age, gender: user.gender, family_history: user.family_history, medical_conditions: user.medical_conditions
+        id: user._id.toString(),
+        email: user.email,
+        first_name: user.first_name,
+        last_name: user.last_name,
+        age: user.age,
+        gender: user.gender,
+        family_history: user.family_history,
+        medical_conditions: user.medical_conditions,
+        baselineCompleted: user.baselineCompleted || false,
+        baselineScores: user.baselineScores || {},
+        baselineDate: user.baselineDate || null,
+        reminderEnabled: user.reminderEnabled || false,
+        reminderTime: user.reminderTime || '',
+        preferredLanguage: user.preferredLanguage || 'en'
       }
     });
   } catch (error) {
@@ -201,11 +242,22 @@ app.post('/api/auth/login', async (req, res) => {
 // Get current user profile
 app.get('/api/auth/profile', authenticateToken, async (req, res) => {
   try {
-    const user = await User.findById(req.user.userId, 'email first_name last_name age gender family_history medical_conditions created_at').lean();
+    const user = await User.findById(req.user.userId, 'email first_name last_name age gender family_history medical_conditions baselineCompleted baselineScores baselineDate reminderEnabled reminderTime preferredLanguage created_at').lean();
     if (!user) {
       return res.status(404).json({ error: 'User not found' });
     }
-    res.json({ user: { id: user._id.toString(), ...user } });
+    res.json({
+      user: {
+        id: user._id.toString(),
+        ...user,
+        baselineCompleted: user.baselineCompleted || false,
+        baselineScores: user.baselineScores || {},
+        baselineDate: user.baselineDate || null,
+        reminderEnabled: user.reminderEnabled || false,
+        reminderTime: user.reminderTime || '',
+        preferredLanguage: user.preferredLanguage || 'en'
+      }
+    });
   } catch (error) {
     console.error('Profile fetch error:', error);
     res.status(500).json({ error: 'Internal server error' });
@@ -236,6 +288,69 @@ app.put('/api/auth/profile', authenticateToken, async (req, res) => {
     res.json({ message: 'Profile updated successfully' });
   } catch (error) {
     console.error('Profile update error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Baseline calibration endpoint (first-time user baseline)
+app.post('/api/auth/baseline', authenticateToken, async (req, res) => {
+  try {
+    const { baselineScores } = req.body;
+    if (!baselineScores || typeof baselineScores !== 'object') {
+      return res.status(400).json({ error: 'Baseline scores are required' });
+    }
+
+    const updated = await User.findByIdAndUpdate(
+      req.user.userId,
+      {
+        baselineScores,
+        baselineCompleted: true,
+        baselineDate: new Date()
+      },
+      { new: true }
+    ).lean();
+
+    if (!updated) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({
+      message: 'Baseline calibration completed',
+      baselineCompleted: updated.baselineCompleted,
+      baselineScores: updated.baselineScores,
+      baselineDate: updated.baselineDate
+    });
+  } catch (error) {
+    console.error('Baseline update error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Reminder settings endpoint
+app.put('/api/auth/reminders', authenticateToken, async (req, res) => {
+  try {
+    const { reminderEnabled, reminderTime } = req.body;
+
+    const updated = await User.findByIdAndUpdate(
+      req.user.userId,
+      {
+        reminderEnabled: Boolean(reminderEnabled),
+        reminderTime: typeof reminderTime === 'string' ? reminderTime : ''
+      },
+      { new: true }
+    ).lean();
+
+    if (!updated) {
+      return res.status(404).json({ error: 'User not found' });
+    }
+
+    return res.json({
+      message: 'Reminder settings updated',
+      reminderEnabled: updated.reminderEnabled,
+      reminderTime: updated.reminderTime
+    });
+  } catch (error) {
+    console.error('Reminder update error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
@@ -412,6 +527,32 @@ app.post('/api/results', authenticateToken, async (req, res) => {
 
     const percentage = Math.round((created.score / created.max_score) * 100);
 
+    // Compare against baseline if available
+    let baselineComparison = null;
+    try {
+      const user = await User.findById(req.user.userId).lean();
+      const baseline = user?.baselineScores || {};
+      const normalizedTestType = String(testTypeId).toLowerCase();
+      let baselineValue = null;
+
+      if (normalizedTestType.includes('word') || normalizedTestType.includes('recall')) {
+        baselineValue = baseline.memoryRecall;
+      } else if (normalizedTestType.includes('stroop') || normalizedTestType.includes('attention')) {
+        baselineValue = baseline.attention;
+      }
+
+      if (typeof baselineValue === 'number' && baselineValue > 0) {
+        const change = ((percentage - baselineValue) / baselineValue) * 100;
+        baselineComparison = {
+          baselineValue,
+          currentValue: percentage,
+          percentChange: Math.round(change)
+        };
+      }
+    } catch (e) {
+      console.warn('Baseline comparison failed:', e.message);
+    }
+
     return res.status(201).json({
       result: {
         id: created._id.toString(),
@@ -423,7 +564,8 @@ app.post('/api/results', authenticateToken, async (req, res) => {
         time_taken: created.time_taken || null,
         completed_at: created.completed_at,
         metadata: created.test_data?.metadata || null,
-      }
+      },
+      baselineComparison
     });
   } catch (error) {
     console.error('❌ Save result error:', error);

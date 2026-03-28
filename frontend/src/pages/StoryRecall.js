@@ -1,10 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
 function StoryRecall() {
-  const { user, token } = useAuth();
   const recognitionRef = useRef(null);
   
   const [sessionId, setSessionId] = useState(null);
@@ -19,8 +17,6 @@ function StoryRecall() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isStoryVisible, setIsStoryVisible] = useState(false); // Hidden by default when narration starts
   const [isPaused, setIsPaused] = useState(false);
-  const [remainingText, setRemainingText] = useState('');
-  const [narrationResolve, setNarrationResolve] = useState(null);
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -83,14 +79,12 @@ function StoryRecall() {
         if (currentSentenceIndex >= sentences.length) {
           setIsSpeaking(false);
           setIsPaused(false);
-          setRemainingText('');
           resolve();
           return;
         }
 
         // Store remaining text for resume functionality
-        const remaining = sentences.slice(currentSentenceIndex).join('. ');
-        setRemainingText(remaining);
+        sentences.slice(currentSentenceIndex).join('. ');
 
         const utterance = new SpeechSynthesisUtterance(sentences[currentSentenceIndex].trim());
         utterance.rate = 0.9;
@@ -113,15 +107,11 @@ function StoryRecall() {
           console.error('Speech synthesis error:', error);
           setIsSpeaking(false);
           setIsPaused(false);
-          setRemainingText('');
           resolve();
         };
 
         window.speechSynthesis.speak(utterance);
       };
-
-      // Store resolve function for resume
-      setNarrationResolve(() => resolve);
       speakSentence();
     });
   };

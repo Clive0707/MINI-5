@@ -55,7 +55,8 @@ const Register = () => {
       });
 
       if (result.success) {
-        navigate('/dashboard');
+        const baselineIncomplete = result.user?.baselineCompleted === false;
+        navigate(baselineIncomplete ? '/baseline' : '/dashboard');
       }
     } catch (error) {
       console.error('Registration error:', error);

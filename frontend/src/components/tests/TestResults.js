@@ -11,6 +11,7 @@ import {
 
 const TestResults = ({ 
   testResult, 
+  baselineComparison,
   onRetake, 
   onViewHistory,
   onSave,
@@ -117,6 +118,11 @@ const TestResults = ({
                 {score}/{maxScore} points
               </p>
               <p className="text-lg text-gray-600 mb-1">{getScoreMessage(percentage)}</p>
+              {baselineComparison && (
+                <p className="text-sm text-gray-500">
+                  Baseline change: <span className="font-semibold">{baselineComparison.percentChange >= 0 ? '+' : ''}{baselineComparison.percentChange}%</span>
+                </p>
+              )}
               {performance_level && (
                 <p className="text-sm text-gray-500">Performance Level: <span className="font-semibold">{performance_level}</span></p>
               )}

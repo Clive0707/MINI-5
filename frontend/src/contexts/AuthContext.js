@@ -49,7 +49,7 @@ export const AuthProvider = ({ children }) => {
       setUser(userData);
       
       toast.success('Login successful!');
-      return { success: true };
+      return { success: true, user: userData };
     } catch (error) {
       const message = error.response?.data?.error || 'Login failed';
       toast.error(message);
@@ -68,7 +68,7 @@ export const AuthProvider = ({ children }) => {
 
       
       toast.success('Registration successful! Welcome to Dementia Tracker.');
-      return { success: true };
+      return { success: true, user: newUser };
     } catch (error) {
       const message = error.response?.data?.error || 'Registration failed';
       toast.error(message);
@@ -103,6 +103,7 @@ export const AuthProvider = ({ children }) => {
     register,
     logout,
     updateProfile,
+    refreshProfile: fetchUserProfile,
     isAuthenticated: !!user
   };
 

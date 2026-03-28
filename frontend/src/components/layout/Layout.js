@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../contexts/AuthContext';
 import { 
   Menu, 
@@ -14,21 +15,37 @@ import {
   Heart,
   Users
 } from 'lucide-react';
+import AIAssistant from '../AIAssistant';
 
 // ===== NAVBAR COMPONENT =====
 const Navbar = () => {
   const { user, logout } = useAuth();
+  const { t, i18n } = useTranslation();
   const location = useLocation();
   const navigate = useNavigate();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [language, setLanguage] = useState(i18n.language || 'en');
 
   const navigation = [
-    { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
-    { name: 'Tests', href: '/tests', icon: Brain },
-    { name: 'Risk Evaluation', href: '/risk-evaluation', icon: Shield },
-    { name: 'Reports', href: '/reports', icon: FileText },
+    { name: t('nav.dashboard'), href: '/dashboard', icon: BarChart3 },
+    { name: t('nav.tests'), href: '/tests', icon: Brain },
+    { name: t('nav.riskEvaluation'), href: '/risk-evaluation', icon: Shield },
+    { name: t('nav.reports'), href: '/reports', icon: FileText },
+    { name: t('nav.settings'), href: '/settings', icon: Users },
   ];
+
+  const availableLanguages = [
+    { code: 'en', label: 'EN' },
+    { code: 'hi', label: 'HI' },
+    { code: 'mr', label: 'MR' }
+  ];
+
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng);
+    localStorage.setItem('language', lng);
+    setLanguage(lng);
+  };
 
   const isActive = (path) => location.pathname === path;
 
@@ -100,14 +117,14 @@ const Navbar = () => {
                       className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       <Settings className="w-4 h-4 mr-3" />
-                      Profile Settings
+                      {t('nav.profileSettings')}
                     </Link>
                     <button
                       onClick={handleLogout}
                       className="flex items-center w-full px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                     >
                       <LogOut className="w-4 h-4 mr-3" />
-                      Sign Out
+                      {t('nav.signOut')}
                     </button>
                   </div>
                 )}
@@ -118,14 +135,31 @@ const Navbar = () => {
                   to="/login"
                   className="text-gray-500 hover:text-gray-700 px-3 py-2 text-sm font-medium transition-colors"
                 >
-                  Sign In
+                  {t('nav.signIn')}
                 </Link>
                 <Link
                   to="/register"
                   className="btn-primary"
                 >
-                  Get Started
+                  {t('nav.getStarted')}
                 </Link>
+              </div>
+            )}
+
+            {/* Language switcher */}
+            {user && (
+              <div className="hidden sm:flex items-center mr-4">
+                <select
+                  value={language}
+                  onChange={(e) => changeLanguage(e.target.value)}
+                  className="rounded-lg border border-gray-200 bg-white text-sm text-gray-600 px-3 py-2 focus:outline-none focus:ring-2 focus:ring-primary-500"
+                >
+                  {availableLanguages.map((lang) => (
+                    <option key={lang.code} value={lang.code}>
+                      {lang.label}
+                    </option>
+                  ))}
+                </select>
               </div>
             )}
 
@@ -314,6 +348,7 @@ const Layout = ({ children }) => {
         {children}
       </main>
       <Footer />
+      <AIAssistant />
     </div>
   );
 };

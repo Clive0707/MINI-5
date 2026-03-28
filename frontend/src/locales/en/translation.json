@@ -1,0 +1,55 @@
+{
+  "nav": {
+    "dashboard": "Dashboard",
+    "tests": "Tests",
+    "riskEvaluation": "Risk Evaluation",
+    "reports": "Reports",
+    "settings": "Settings",
+    "signIn": "Sign In",
+    "getStarted": "Get Started",
+    "profileSettings": "Profile Settings",
+    "signOut": "Sign Out",
+    "language": "Language"
+  },
+  "auth": {
+    "welcomeBack": "Welcome Back",
+    "signInToContinue": "Sign in to continue monitoring your cognitive health",
+    "emailAddress": "Email address",
+    "password": "Password",
+    "rememberMe": "Remember me",
+    "forgotPassword": "Forgot password?",
+    "signIn": "Sign in",
+    "signUp": "Sign up for free",
+    "dontHaveAccount": "Don't have an account?",
+    "welcome": "Welcome!",
+    "register": "Register",
+    "createAccount": "Create account"
+  },
+  "baseline": {
+    "title": "Baseline Assessment",
+    "description": "Complete a short baseline assessment to help track your progress over time.",
+    "start": "Start Baseline",
+    "submit": "Submit Baseline",
+    "success": "Baseline saved! You can now continue to the dashboard.",
+    "memoryTask": "Memory Task",
+    "recallPrompt": "Type the words you remember from the list above (comma separated).",
+    "needHelp": "Need help?" 
+  },
+  "settings": {
+    "title": "Settings",
+    "profile": "Profile",
+    "notifications": "Notifications",
+    "language": "Language",
+    "baseline": "Baseline",
+    "enableNotifications": "Enable reminders",
+    "reminderTime": "Reminder time",
+    "saveChanges": "Save changes",
+    "saved": "Settings updated"
+  },
+  "assistant": {
+    "openChat": "Ask the AI assistant",
+    "askQuestion": "Type a question about memory, tests, or cognitive health...",
+    "send": "Send",
+    "loading": "Thinking..."
+  }
+}
