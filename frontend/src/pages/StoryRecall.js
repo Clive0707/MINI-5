@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
 function StoryRecall() {
+  const { t } = useTranslation();
   const recognitionRef = useRef(null);
   
   const [sessionId, setSessionId] = useState(null);
