@@ -101,7 +101,7 @@ router.post('/start', authenticateToken, async (req, res) => {
     // Try to use Gemini API if available
     if (genAI) {
       try {
-        const model = genAI.getGenerativeModel({ model: 'gemini-1.5-flash', generationConfig: FAST_CONFIG })
+        const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash', generationConfig: FAST_CONFIG })
         const prompt = `You are running a cognitive assessment focusing on story recall.
 Create JSON with a 10-sentence coherent story (plain text, no numbers) and 5-7 concise recall questions about key details.
 Return strictly JSON with keys: storyText (string), recallQuestions (array of strings).`

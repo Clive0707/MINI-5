@@ -21,6 +21,7 @@ const User = require('./database/models/User');
 const CognitiveTest = require('./database/models/CognitiveTest');
 const RiskEvaluation = require('./database/models/RiskEvaluation');
 const TestSchedule = require('./database/models/TestSchedule');
+const Reminder = require('./database/models/Reminder');
 
 // Initialize reminder service for email reminders
 const reminderService = require('./services/reminderService');
@@ -351,6 +352,70 @@ app.put('/api/auth/reminders', authenticateToken, async (req, res) => {
     });
   } catch (error) {
     console.error('Reminder update error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Schedule daily reminder
+app.post('/api/reminders', async (req, res) => {
+  try {
+    const { email, time, userId } = req.body;
+
+    if (!email || !time) {
+      return res.status(400).json({ error: 'Email and time are required' });
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    // Check for duplicates
+    const existing = await Reminder.findOne({ email, time }).lean();
+    if (existing) {
+      return res.status(409).json({ error: 'A reminder is already scheduled for this email at this time' });
+    }
+
+    await Reminder.create({ email, time, userId: userId || null });
+
+    // Send confirmation email asynchronously (fire-and-forget)
+    reminderService.sendConfirmationEmail(email, time).catch(err => {
+      console.error('Failed to dispatch background confirmation email:', err);
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: 'Reminder scheduled successfully'
+    });
+  } catch (error) {
+    console.error('Save reminder error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Get user reminders
+app.get('/api/reminders', authenticateToken, async (req, res) => {
+  try {
+    const reminders = await Reminder.find({ userId: req.user.userId }).lean();
+    return res.json({ reminders });
+  } catch (error) {
+    console.error('Fetch reminders error:', error);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// Cancel/Delete reminder
+app.delete('/api/reminders/:id', authenticateToken, async (req, res) => {
+  try {
+    const { id } = req.params;
+    const deleted = await Reminder.findOneAndDelete({ _id: id, userId: req.user.userId });
+    if (!deleted) {
+      return res.status(404).json({ error: 'Reminder not found or unauthorized' });
+    }
+    return res.json({ success: true, message: 'Reminder cancelled successfully' });
+  } catch (error) {
+    console.error('Delete reminder error:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

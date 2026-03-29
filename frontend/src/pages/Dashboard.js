@@ -11,7 +11,8 @@ import {
   Activity,
   Target,
   Award,
-  RefreshCw
+  RefreshCw,
+  BellRing
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import api from '../services/api';
@@ -29,6 +30,63 @@ const Dashboard = () => {
     last_updated: null
   });
   const [loading, setLoading] = useState(true);
+
+  // Daily Reminders State
+  const [showReminderModal, setShowReminderModal] = useState(false);
+  const [reminderForm, setReminderForm] = useState({ email: user?.email || '', time: '09:00' });
+  const [reminderLoading, setReminderLoading] = useState(false);
+  const [reminderMessage, setReminderMessage] = useState({ text: '', type: '' });
+  const [existingReminders, setExistingReminders] = useState([]);
+
+  const fetchReminders = async () => {
+    try {
+      const resp = await api.get('/reminders');
+      setExistingReminders(resp.data?.reminders || []);
+    } catch (e) {
+      console.error('Failed to fetch reminders:', e);
+    }
+  };
+
+  const handleOpenReminderModal = () => {
+    setShowReminderModal(true);
+    fetchReminders();
+    setReminderMessage({ text: '', type: '' });
+  };
+
+  const handleDeleteReminder = async (id) => {
+    try {
+      await api.delete(`/reminders/${id}`);
+      setReminderMessage({ text: 'Reminder cancelled successfully', type: 'success' });
+      await fetchReminders();
+    } catch (e) {
+      setReminderMessage({ text: 'Failed to cancel reminder', type: 'error' });
+    }
+  };
+
+  const handleReminderSubmit = async (e) => {
+    e.preventDefault();
+    setReminderLoading(true);
+    setReminderMessage({ text: '', type: '' });
+    try {
+      const payload = {
+        email: reminderForm.email,
+        time: reminderForm.time,
+        userId: user?.userId || user?.id || null
+      };
+      const response = await api.post('/reminders', payload);
+      setReminderMessage({ text: response.data?.message || 'Reminder scheduled successfully', type: 'success' });
+      await fetchReminders();
+      setTimeout(() => {
+        setShowReminderModal(false);
+        setReminderMessage({ text: '', type: '' });
+      }, 2500);
+    } catch (error) {
+      const errorMsg = error.response?.data?.error || 'Failed to schedule reminder';
+      setReminderMessage({ text: errorMsg, type: 'error' });
+    } finally {
+      setReminderLoading(false);
+    }
+  };
 
   useEffect(() => {
     fetchDashboardData();
@@ -208,6 +266,20 @@ const Dashboard = () => {
             <h3 className="text-lg font-semibold text-gray-900 mb-2">View Reports</h3>
             <p className="text-gray-600 text-sm">Check your detailed performance reports</p>
           </Link>
+
+          <button
+            onClick={handleOpenReminderModal}
+            className="text-left group bg-white rounded-3xl p-6 shadow-soft hover:shadow-medium transition-all duration-300 transform hover:-translate-y-1 border-l-4 border-l-blue-500"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div className="w-12 h-12 bg-blue-100 rounded-2xl flex items-center justify-center">
+                <BellRing className="w-6 h-6 text-blue-600" />
+              </div>
+              <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors duration-300" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">Schedule Reminders</h3>
+            <p className="text-gray-600 text-sm">Set up daily email notifications</p>
+          </button>
         </div>
 
         {/* Main Dashboard Grid */}
@@ -425,6 +497,90 @@ const Dashboard = () => {
           </div>
         </div>
       </div>
+
+      {/* Reminder Modal Overlay */}
+      {showReminderModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 px-4">
+          <div className="bg-white rounded-2xl p-8 max-w-md w-full shadow-2xl transform transition-all">
+            <h3 className="text-2xl font-bold text-gray-900 mb-4 flex items-center">
+              <BellRing className="w-6 h-6 mr-3 text-primary-600" /> Schedule Daily Reminder
+            </h3>
+            <p className="text-gray-600 mb-6">Receive a daily notification to remind you to log in and take your cognitive tests.</p>
+            
+            {reminderMessage.text && (
+              <div className={`p-4 mb-6 rounded-lg text-sm font-medium ${reminderMessage.type === 'error' ? 'bg-red-50 text-red-800' : 'bg-green-50 text-green-800'}`}>
+                {reminderMessage.text}
+              </div>
+            )}
+
+            {existingReminders.length > 0 && (
+              <div className="mb-6 bg-gray-50 rounded-xl p-4 border border-gray-100">
+                <h4 className="text-sm font-semibold text-gray-700 mb-3">Active Reminders</h4>
+                <div className="space-y-3 max-h-48 overflow-y-auto pr-1">
+                  {existingReminders.map(rem => (
+                    <div key={rem._id} className="flex items-center justify-between text-sm bg-white p-3 rounded-lg shadow-sm border border-gray-100 border-l-4 border-l-blue-500">
+                      <div>
+                        <div className="font-medium text-gray-900">{rem.time}</div>
+                        <div className="text-gray-500 text-xs truncate max-w-[200px]">{rem.email}</div>
+                      </div>
+                      <button 
+                        type="button" 
+                        onClick={() => handleDeleteReminder(rem._id)}
+                        className="text-red-500 hover:text-red-700 font-medium px-2 py-1 rounded hover:bg-red-50 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            <form onSubmit={handleReminderSubmit}>
+              <div className="mb-5">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Email Address</label>
+                <input
+                  type="email"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  value={reminderForm.email}
+                  onChange={(e) => setReminderForm({ ...reminderForm, email: e.target.value })}
+                  placeholder="name@example.com"
+                />
+              </div>
+
+              <div className="mb-8">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Reminder Time</label>
+                <input
+                  type="time"
+                  required
+                  className="w-full px-4 py-2 border border-gray-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 outline-none"
+                  value={reminderForm.time}
+                  onChange={(e) => setReminderForm({ ...reminderForm, time: e.target.value })}
+                />
+              </div>
+
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  className="px-5 py-2.5 bg-gray-100 text-gray-700 font-medium rounded-xl hover:bg-gray-200 transition-colors"
+                  onClick={() => setShowReminderModal(false)}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={reminderLoading}
+                  className="px-5 py-2.5 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50 flex items-center"
+                >
+                  {reminderLoading ? 'Saving...' : 'Save Reminder'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
