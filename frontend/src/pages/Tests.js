@@ -1,18 +1,20 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { Brain, Clock, BarChart3, Play, Calendar, Target, TrendingUp, Award, Zap, Mic } from 'lucide-react';
 // import { useAuth } from '../contexts/AuthContext';
 import { TestScheduler } from '../components/tests/Tests';
 
 const Tests = () => {
+  const { t } = useTranslation();
   const [activeTab, setActiveTab] = useState('available');
 
   const availableTests = [
     {
       id: 'word_recall',
-      name: 'Hopkins Verbal Learning Test–Revised (HVLT-R)',
-      description: 'Test your memory by memorizing and recalling a list of words. This test evaluates short-term memory capacity and retention.',
-      difficulty: 'Easy',
+      name: t('tests.wordRecall'),
+      description: t('tests.wordRecallDesc'),
+      difficulty: t('tests.easy'),
       duration: '3-5 min',
       icon: Brain,
       color: 'primary',
@@ -20,9 +22,9 @@ const Tests = () => {
     },
     {
       id: 'stroop',
-      name: 'Stroop Color–Word Interference Test',
-      description: 'Measure your attention and cognitive control by identifying the color of text while ignoring the word itself.',
-      difficulty: 'Medium',
+      name: t('tests.stroop'),
+      description: t('tests.stroopDesc'),
+      difficulty: t('tests.medium'),
       duration: '5-7 min',
       icon: Target,
       color: 'secondary',
@@ -30,9 +32,9 @@ const Tests = () => {
     },
     {
       id: 'pattern_recognition',
-      name: 'Pattern Recognition Memory (PRM) Test',
-      description: 'Assess your logical reasoning and pattern identification skills by finding the next number in sequences.',
-      difficulty: 'Hard',
+      name: t('tests.patternRecognition'),
+      description: t('tests.patternRecognitionDesc'),
+      difficulty: t('tests.hard'),
       duration: '7-10 min',
       icon: TrendingUp,
       color: 'accent',
@@ -40,9 +42,9 @@ const Tests = () => {
     },
     {
       id: 'story_recall',
-      name: 'Wechsler Logical Memory Test',
-      description: 'Listen to a story and answer recall questions to assess your logical memory and narrative comprehension.',
-      difficulty: 'Medium',
+      name: t('tests.storyRecall'),
+      description: t('tests.storyRecallDesc'),
+      difficulty: t('tests.medium'),
       duration: '10-15 min',
       icon: Mic,
       color: 'primary',
@@ -93,10 +95,10 @@ const Tests = () => {
         <div className="text-center mb-12">
           <div className="inline-flex items-center px-4 py-2 rounded-full bg-white/80 backdrop-blur-sm text-primary-700 text-sm font-medium mb-6 shadow-soft">
             <Brain className="w-4 h-4 mr-2" />
-            Cognitive Assessment Suite
+            {t('tests.cognitiveAssessmentSuite')}
           </div>
           <h1 className="text-5xl font-display font-bold text-gray-900 mb-4">
-            Test Your Cognitive Health
+            {t('tests.title')}
           </h1>
           <p className="text-xl text-gray-600 max-w-3xl mx-auto">
             Take scientifically-validated cognitive assessments to monitor your memory, attention, and executive function. 

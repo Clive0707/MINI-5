@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   Brain, 
   Calendar, 
@@ -21,6 +22,7 @@ import notificationService from '../services/notificationService';
 
 const Dashboard = () => {
   const { user } = useAuth();
+  const { t } = useTranslation();
   const [dashboardData, setDashboardData] = useState({
     user_profile: { name: '', age: 0, gender: '' },
     risk_assessment: null,

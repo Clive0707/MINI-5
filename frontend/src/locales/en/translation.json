@@ -23,7 +23,44 @@
     "dontHaveAccount": "Don't have an account?",
     "welcome": "Welcome!",
     "register": "Register",
-    "createAccount": "Create account"
+    "createAccount": "Create account",
+    "fullName": "Full Name",
+    "age": "Age",
+    "gender": "Gender",
+    "familyHistory": "Family History of Dementia",
+    "medicalConditions": "Medical Conditions",
+    "confirmPassword": "Confirm Password",
+    "passwordMismatch": "Passwords do not match",
+    "passwordShort": "Password must be at least 6 characters long",
+    "passwordStrength": "Password Strength",
+    "weak": "Weak",
+    "fair": "Fair",
+    "strong": "Strong",
+    "registerSuccess": "Registration successful!"
+  },
+  "home": {
+    "tagline": "Cognitive Health Monitoring Platform",
+    "title": "Take Control of Your",
+    "subtitle": "Cognitive Health",
+    "description": "Early detection and regular monitoring of cognitive function can make a significant difference. Join thousands of users who are proactively managing their brain health.",
+    "signIn": "Sign In",
+    "signUp": "Create Account",
+    "features": {
+      "cognitiveAssessment": "Cognitive Assessment",
+      "cognitiveAssessmentDesc": "Comprehensive tests to evaluate memory, attention, and executive function",
+      "earlyDetection": "Early Detection",
+      "earlyDetectionDesc": "Identify cognitive changes before they become significant",
+      "progressTracking": "Progress Tracking",
+      "progressTrackingDesc": "Monitor your cognitive health over time with detailed analytics",
+      "regularMonitoring": "Regular Monitoring",
+      "regularMonitoringDesc": "Scheduled assessments to maintain consistent health tracking"
+    },
+    "stats": {
+      "activeUsers": "Active Users",
+      "testCompleted": "Tests Completed",
+      "accuracyRate": "Accuracy Rate",
+      "supportAvailable": "Support Available"
+    }
   },
   "baseline": {
     "title": "Baseline Assessment",
@@ -35,6 +72,68 @@
     "recallPrompt": "Type the words you remember from the list above (comma separated).",
     "needHelp": "Need help?" 
   },
+  "dashboard": {
+    "title": "Dashboard",
+    "greeting": "Welcome back",
+    "yourProfile": "Your Profile",
+    "riskAssessment": "Risk Assessment",
+    "testSummary": "Test Summary",
+    "recentTests": "Recent Tests",
+    "upcomingTests": "Upcoming Tests",
+    "overallScore": "Overall Score",
+    "lastTestDate": "Last Test Date",
+    "refreshDashboard": "Refresh Dashboard"
+  },
+  "tests": {
+    "title": "Test Your Cognitive Health",
+    "cognitiveAssessmentSuite": "Cognitive Assessment Suite",
+    "available": "Available Tests",
+    "scheduled": "Scheduled Tests",
+    "wordRecall": "Hopkins Verbal Learning Test–Revised (HVLT-R)",
+    "wordRecallDesc": "Test your memory by memorizing and recalling a list of words. This test evaluates short-term memory capacity and retention.",
+    "stroop": "Stroop Color–Word Interference Test",
+    "stroopDesc": "Measure your attention and cognitive control by identifying the color of text while ignoring the word itself.",
+    "patternRecognition": "Pattern Recognition Memory (PRM) Test",
+    "patternRecognitionDesc": "Assess your logical reasoning and pattern identification skills by finding the next number in sequences.",
+    "storyRecall": "Wechsler Logical Memory Test",
+    "storyRecallDesc": "Listen to a story and answer recall questions to assess your logical memory and narrative comprehension.",
+    "difficulty": "Difficulty",
+    "duration": "Duration",
+    "startTest": "Start Test",
+    "easy": "Easy",
+    "medium": "Medium",
+    "hard": "Hard"
+  },
+  "reports": {
+    "title": "Reports",
+    "generateReport": "Generate Report",
+    "downloadReport": "Download Report",
+    "testHistory": "Test History",
+    "filter": "Filter",
+    "all": "All",
+    "noData": "No report data available"
+  },
+  "riskEvaluation": {
+    "title": "Risk Evaluation",
+    "description": "Assess your cognitive risk factors",
+    "calculate": "Calculate Risk",
+    "results": "Risk Assessment Results",
+    "lowRisk": "Low Risk",
+    "moderateRisk": "Moderate Risk",
+    "highRisk": "High Risk",
+    "factorsConsidered": "Factors Considered",
+    "recommendations": "Recommendations",
+    "age": "Age",
+    "familyHistory": "Family History",
+    "smoking": "Smoking Status",
+    "physicalActivity": "Physical Activity Level",
+    "memoryIssues": "Memory Issues",
+    "selfAssessment": "Self Assessment"
+  },
+  "profile": {
+    "title": "Profile",
+    "comingSoon": "Profile page coming soon..."
+  },
   "settings": {
     "title": "Settings",
     "profile": "Profile",
@@ -44,7 +143,13 @@
     "enableNotifications": "Enable reminders",
     "reminderTime": "Reminder time",
     "saveChanges": "Save changes",
-    "saved": "Settings updated"
+    "saved": "Settings updated",
+    "select": "Select",
+    "firstName": "First Name",
+    "lastName": "Last Name",
+    "baselineScore": "Baseline score",
+    "establishedOn": "Baseline established on",
+    "retakeBaseline": "Retake Baseline"
   },
   "assistant": {
     "openChat": "Ask the AI assistant",

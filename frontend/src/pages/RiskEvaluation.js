@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import api from '../services/api';
@@ -16,6 +17,7 @@ import { generateRiskReportPDF } from '../utils/generateRiskReport';
 const RiskEvaluation = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
   const [riskResult, setRiskResult] = useState(null);
