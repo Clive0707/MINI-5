@@ -42,7 +42,7 @@ const Settings = () => {
       await refreshProfile();
       toast.success(t('settings.saved'));
     } catch (err) {
-      toast.error('Failed to save profile');
+      toast.error(t('settings.failedToSaveProfile'));
     } finally {
       setSaving(false);
     }
@@ -59,7 +59,7 @@ const Settings = () => {
       toast.success(t('settings.saved'));
       return response.data;
     } catch (err) {
-      toast.error('Failed to save reminders');
+      toast.error(t('settings.failedToSaveReminders'));
     } finally {
       setSaving(false);
     }
@@ -78,9 +78,9 @@ const Settings = () => {
           <p className="text-gray-600">{t('baseline.success')}</p>
           <div className="bg-gray-50 border border-gray-200 rounded-2xl p-4">
             <p className="text-sm text-gray-700">
-              <strong>Baseline score:</strong> {user.baselineScores?.memoryRecall ?? '—'} / 10
+              <strong>{t('settings.baselineScore')}</strong> {user.baselineScores?.memoryRecall ?? '—'} / 10
             </p>
-            <p className="text-sm text-gray-500 mt-1">Baseline established on {user.baselineDate ? new Date(user.baselineDate).toLocaleDateString() : '—'}.</p>
+            <p className="text-sm text-gray-500 mt-1">{t('settings.establishedOn')} {user.baselineDate ? new Date(user.baselineDate).toLocaleDateString() : '—'}.</p>
           </div>
           <button
             className="btn-primary"
@@ -133,7 +133,7 @@ const Settings = () => {
               <div className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">First name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.firstName')}</label>
                     <input
                       name="first_name"
                       value={profileForm.first_name}
@@ -142,7 +142,7 @@ const Settings = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Last name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.lastName')}</label>
                     <input
                       name="last_name"
                       value={profileForm.last_name}
@@ -154,7 +154,7 @@ const Settings = () => {
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Age</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.age')}</label>
                     <input
                       name="age"
                       type="number"
@@ -166,24 +166,24 @@ const Settings = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Gender</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.gender')}</label>
                     <select
                       name="gender"
                       value={profileForm.gender}
                       onChange={handleProfileChange}
                       className="w-full px-4 py-3 border border-gray-200 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500"
                     >
-                      <option value="">Select</option>
-                      <option value="Male">Male</option>
-                      <option value="Female">Female</option>
-                      <option value="Other">Other</option>
+                      <option value="">{t('settings.select')}</option>
+                      <option value="Male">{t('settings.male')}</option>
+                      <option value="Female">{t('settings.female')}</option>
+                      <option value="Other">{t('settings.other')}</option>
                     </select>
                   </div>
                 </div>
 
                 <div className="space-y-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Family History</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.familyHistory')}</label>
                     <textarea
                       name="family_history"
                       value={profileForm.family_history}
@@ -193,7 +193,7 @@ const Settings = () => {
                     />
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Medical Conditions</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">{t('settings.medicalConditions')}</label>
                     <textarea
                       name="medical_conditions"
                       value={profileForm.medical_conditions}
@@ -219,7 +219,7 @@ const Settings = () => {
                 <div className="flex items-center justify-between">
                   <div>
                     <h2 className="text-lg font-semibold text-gray-900">{t('settings.notifications')}</h2>
-                    <p className="text-sm text-gray-600">Enable daily reminders to take your cognitive tests.</p>
+                    <p className="text-sm text-gray-600">{t('settings.enableDailyReminders')}</p>
                   </div>
                   <label className="flex items-center space-x-2">
                     <input
@@ -252,10 +252,10 @@ const Settings = () => {
 
             {activeTab === 'language' && (
               <div className="space-y-6">
-                <p className="text-gray-600">Choose your preferred language for the application.</p>
+                <p className="text-gray-600">{t('settings.chooseLanguage')}</p>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   {[
-                    { code: 'en', label: 'English' },
+                    { code: 'en', label: t('settings.english') },
                     { code: 'hi', label: 'हिन्दी' },
                     { code: 'mr', label: 'मराठी' }
                   ].map((lang) => (

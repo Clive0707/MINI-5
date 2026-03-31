@@ -70,7 +70,9 @@
     "success": "Baseline saved! You can now continue to the dashboard.",
     "memoryTask": "Memory Task",
     "recallPrompt": "Type the words you remember from the list above (comma separated).",
-    "needHelp": "Need help?" 
+    "needHelp": "Need help?",
+    "visibleFor": "(Visible for 9 seconds)",
+    "saving": "Saving..."
   },
   "dashboard": {
     "title": "Dashboard",
@@ -149,7 +151,35 @@
     "lastName": "Last Name",
     "baselineScore": "Baseline score",
     "establishedOn": "Baseline established on",
-    "retakeBaseline": "Retake Baseline"
+    "retakeBaseline": "Retake Baseline",
+    "age": "Age",
+    "gender": "Gender",
+    "familyHistory": "Family History",
+    "medicalConditions": "Medical Conditions",
+    "male": "Male",
+    "female": "Female",
+    "other": "Other",
+    "enableDailyReminders": "Enable daily reminders to take your cognitive tests.",
+    "chooseLanguage": "Choose your preferred language for the application.",
+    "english": "English",
+    "failedToSaveProfile": "Failed to save profile",
+    "failedToSaveReminders": "Failed to save reminders"
+  },
+  "testResults": {
+    "testComplete": "Test Complete! 🧠",
+    "hereAreResults": "Here are your results for",
+    "points": "points",
+    "baselineChange": "Baseline change",
+    "performanceLevel": "Performance Level",
+    "standardPerformance": "Standard Performance",
+    "estimatedDementiaRisk": "Estimated dementia risk",
+    "riskDisclaimer": "This is an estimated risk indicator — not a medical diagnosis. See a clinician for evaluation.",
+    "testContribution": "Test contribution",
+    "demographicsContribution": "Demographics contribution",
+    "noResults": "No Test Results",
+    "resultsNotAvailable": "Test results not available or incomplete.",
+    "returnToDashboard": "Return to Dashboard",
+    "avgScore": "avg score"
   },
   "assistant": {
     "openChat": "Ask the AI assistant",

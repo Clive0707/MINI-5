@@ -1,5 +1,6 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   CheckCircle, 
   AlertTriangle, 
@@ -22,19 +23,20 @@ const TestResults = ({
   maxScore = 10 
 }) => {
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   if (!testResult || testResult.score === undefined || testResult.score === null) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-accent-50 flex items-center justify-center">
         <div className="text-center">
           <XCircle className="w-16 h-16 text-red-500 mx-auto mb-4" />
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">No Test Results</h2>
-          <p className="text-gray-600 mb-6">Test results not available or incomplete.</p>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">{t('testResults.noResults')}</h2>
+          <p className="text-gray-600 mb-6">{t('testResults.resultsNotAvailable')}</p>
           <button
             onClick={() => navigate('/dashboard')}
             className="px-6 py-3 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors"
           >
-            Return to Dashboard
+            {t('testResults.returnToDashboard')}
           </button>
         </div>
       </div>
@@ -99,8 +101,8 @@ const TestResults = ({
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* Header */}
         <div className="text-center mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">Test Complete! 🧠</h1>
-          <p className="text-xl text-gray-600">Here are your results for {testName}</p>
+          <h1 className="text-4xl font-bold text-gray-900 mb-4">{t('testResults.testComplete')}</h1>
+          <p className="text-xl text-gray-600">{t('testResults.hereAreResults')} {testName}</p>
         </div>
 
         {/* Main Results Card */}
