@@ -109,7 +109,7 @@ const Baseline = () => {
           <div className="space-y-6">
             <p className="text-gray-700">{t('baseline.memoryTask')}</p>
             <div className="bg-gray-50 border border-gray-200 rounded-2xl p-6">
-              <p className="text-center text-sm text-gray-500 mb-3">(Visible for 9 seconds)</p>
+              <p className="text-center text-sm text-gray-500 mb-3">{t('baseline.visibleFor')}</p>
               <ul className="grid grid-cols-2 gap-3">
                 {visibleWords.map((word) => (
                   <li
@@ -139,7 +139,7 @@ const Baseline = () => {
               disabled={submitting}
               onClick={submitBaseline}
             >
-              {submitting ? 'Saving...' : t('baseline.submit')}
+              {submitting ? t('baseline.saving') : t('baseline.submit')}
             </button>
           </div>
         )}

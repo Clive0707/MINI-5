@@ -70,7 +70,9 @@
     "success": "मूलभूत जतन झाले! आता तुम्ही डॅशबोर्डवर जाऊ शकता.",
     "memoryTask": "स्मृती कार्य",
     "recallPrompt": "वरील यादीतील शब्दांची नोंद करा जे तुम्हाला आठवतात (कॉमाने वेगळे करा).",
-    "needHelp": "मदत हवी आहे?"
+    "needHelp": "मदत हवी आहे?",
+    "visibleFor": "(9 सेकंदांसाठी दिसत आहे)",
+    "saving": "जतन करत आहे..."
   },
   "dashboard": {
     "title": "डॅशबोर्ड",
@@ -149,7 +151,35 @@
     "lastName": "शेवटचे नाव",
     "baselineScore": "मूलभूत स्कोर",
     "establishedOn": "मूलभूत स्थापित",
-    "retakeBaseline": "मूलभूत पुन्हा घ्या"
+    "retakeBaseline": "मूलभूत पुन्हा घ्या",
+    "age": "वय",
+    "gender": "लिंग",
+    "familyHistory": "पारिवारिक इतिहास",
+    "medicalConditions": "वैद्यकीय स्थिती",
+    "male": "पुरुष",
+    "female": "महिला",
+    "other": "इतर",
+    "enableDailyReminders": "आपल्या संज्ञानात्मक चाचण्या घेण्यासाठी दैनिक स्मरणसूचना सक्षम करा.",
+    "chooseLanguage": "अनुप्रयोगासाठी तुमची पसंदीची भाषा निवडा.",
+    "english": "English",
+    "failedToSaveProfile": "प्रोफाइल जतन करण्यात अयशस्वी",
+    "failedToSaveReminders": "स्मरणसूचना जतन करण्यात अयशस्वी"
+  },
+  "testResults": {
+    "testComplete": "चाचणी पूर्ण! 🧠",
+    "hereAreResults": "येथे आपल्या परिणाम आहेत",
+    "points": "गुण",
+    "baselineChange": "मूलभूत बदल",
+    "performanceLevel": "कार्यक्षमता स्तर",
+    "standardPerformance": "मानक कार्यक्षमता",
+    "estimatedDementiaRisk": "अनुमानित डिमेंशिया जोखीम",
+    "riskDisclaimer": "हे एक अनुमानित जोखीम सूचक आहे — वैद्यकीय निदान नाही. मूल्यांकनासाठी क्लिनिशियनला भेटा.",
+    "testContribution": "चाचणी योगदान",
+    "demographicsContribution": "लोकसंख्या योगदान",
+    "noResults": "कोणतेही चाचणी परिणाम नाहीत",
+    "resultsNotAvailable": "चाचणी परिणाम उपलब्ध नाहीत किंवा अपूर्ण आहेत.",
+    "returnToDashboard": "डॅशबोर्डवर परत या",
+    "avgScore": "सरासरी स्कोर"
   },
   "assistant": {
     "openChat": "एआय सहाय्यकाला विचारा",

@@ -70,7 +70,9 @@
     "success": "मूलभूत सहेजा गया! अब आप डैशबोर्ड पर जा सकते हैं।",
     "memoryTask": "स्मृति कार्य",
     "recallPrompt": "ऊपर दी गई सूची में से याद की गई शब्दों को टाइप करें (कॉमा से अलग)।",
-    "needHelp": "मदद चाहिए?" 
+    "needHelp": "मदद चाहिए?",
+    "visibleFor": "(9 सेकंड के लिए दिखाई दे रहा है)",
+    "saving": "बचत..."
   },
   "dashboard": {
     "title": "डैशबोर्ड",
@@ -149,7 +151,35 @@
     "lastName": "अंतिम नाम",
     "baselineScore": "मूलभूत स्कोर",
     "establishedOn": "मूलभूत स्थापित",
-    "retakeBaseline": "मूलभूत फिर से लें"
+    "retakeBaseline": "मूलभूत फिर से लें",
+    "age": "आयु",
+    "gender": "लिंग",
+    "familyHistory": "पारिवारिक इतिहास",
+    "medicalConditions": "चिकित्सा स्थितियां",
+    "male": "पुरुष",
+    "female": "महिला",
+    "other": "अन्य",
+    "enableDailyReminders": "अपनी संज्ञानात्मक परीक्षाएं लेने के लिए दैनिक रिमाइंडर सक्षम करें।",
+    "chooseLanguage": "एप्लिकेशन के लिए अपनी पसंदीदा भाषा चुनें।",
+    "english": "English",
+    "failedToSaveProfile": "प्रोफ़ाइल सहेजने में विफल",
+    "failedToSaveReminders": "रिमाइंडर सहेजने में विफल"
+  },
+  "testResults": {
+    "testComplete": "परीक्षण पूर्ण! 🧠",
+    "hereAreResults": "यहां आपके परिणाम हैं",
+    "points": "बिंदु",
+    "baselineChange": "मूलभूत परिवर्तन",
+    "performanceLevel": "प्रदर्शन स्तर",
+    "standardPerformance": "मानक प्रदर्शन",
+    "estimatedDementiaRisk": "अनुमानित डिमेंशिया जोखिम",
+    "riskDisclaimer": "यह एक अनुमानित जोखिम संकेतक है — चिकित्सा निदान नहीं। मूल्यांकन के लिए क्लिनिशियन से मिलें।",
+    "testContribution": "परीक्षण योगदान",
+    "demographicsContribution": "जनसांख्यिकी योगदान",
+    "noResults": "कोई परीक्षण परिणाम नहीं",
+    "resultsNotAvailable": "परीक्षण परिणाम उपलब्ध नहीं या अधूरे हैं।",
+    "returnToDashboard": "डैशबोर्ड पर लौटें",
+    "avgScore": "औसत स्कोर"
   },
   "assistant": {
     "openChat": "एआई सहायक से पूछें",

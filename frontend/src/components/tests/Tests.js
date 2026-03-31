@@ -864,7 +864,7 @@ const WordRecallTest = ({ onTestComplete }) => {
     'sunset', 'bridge', 'garden', 'castle', 'star'
   ], []);
   const studyTime = 3; // seconds per word
-  const delayTime = 30; // seconds delay before recall
+  const delayTime = 10; // seconds delay before recall
 
   const instructions = (
     <div className="space-y-4">
