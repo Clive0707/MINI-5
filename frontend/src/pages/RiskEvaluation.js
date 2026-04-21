@@ -110,7 +110,7 @@ const RiskEvaluation = () => {
     
     // Validate required fields
     if (!formData.age || parseInt(formData.age) <= 0) {
-      toast.error('Please enter a valid age');
+      toast.error(t('riskEvaluation.validAge'));
       return;
     }
 
@@ -199,18 +199,18 @@ const RiskEvaluation = () => {
 
   const getRiskTips = (category) => {
     if (category === 'Low') {
-      return 'Maintain healthy habits, regular exercise, balanced diet, and cognitive activities.';
+      return t('riskEvaluation.tipLow');
     } else if (category === 'Moderate') {
-      return 'Monitor regularly; try lifestyle improvements such as increased physical activity, mental exercises, and regular health checkups.';
+      return t('riskEvaluation.tipModerate');
     } else {
-      return 'Consider clinical evaluation and share this report with your healthcare provider. Focus on lifestyle modifications and medical consultation.';
+      return t('riskEvaluation.tipHigh');
     }
   };
 
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-8">Risk Evaluation</h1>
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">{t('riskEvaluation.title')}</h1>
 
         {!showResults ? (
           /* Risk Evaluation Form */
@@ -219,7 +219,7 @@ const RiskEvaluation = () => {
               {/* Age */}
               <div>
                 <label htmlFor="age" className="block text-sm font-medium text-gray-700 mb-2">
-                  Age <span className="text-red-500">*</span>
+                  {t('riskEvaluation.age')} <span className="text-red-500">*</span>
                 </label>
                 <input
                   type="number"
@@ -237,7 +237,7 @@ const RiskEvaluation = () => {
               {/* Gender */}
               <div>
                 <label htmlFor="gender" className="block text-sm font-medium text-gray-700 mb-2">
-                  Gender
+                  {t('auth.gender')}
                 </label>
                 <select
                   id="gender"
@@ -246,16 +246,16 @@ const RiskEvaluation = () => {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
-                  <option value="Male">Male</option>
-                  <option value="Female">Female</option>
-                  <option value="Other">Other</option>
+                  <option value="Male">{t('riskEvaluation.male')}</option>
+                  <option value="Female">{t('riskEvaluation.female')}</option>
+                  <option value="Other">{t('riskEvaluation.other')}</option>
                 </select>
               </div>
 
               {/* Family History */}
               <div>
                 <label htmlFor="familyHistory" className="block text-sm font-medium text-gray-700 mb-2">
-                  Family history of dementia
+                  {t('riskEvaluation.familyHistoryLabel')}
                 </label>
                 <select
                   id="familyHistory"
@@ -264,15 +264,15 @@ const RiskEvaluation = () => {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
-                  <option value="No">No</option>
-                  <option value="Yes">Yes</option>
+                  <option value="No">{t('riskEvaluation.no')}</option>
+                  <option value="Yes">{t('riskEvaluation.yes')}</option>
                 </select>
               </div>
 
               {/* Smoking */}
               <div>
                 <label htmlFor="smoking" className="block text-sm font-medium text-gray-700 mb-2">
-                  Smoking
+                  {t('riskEvaluation.smokingLabel')}
                 </label>
                 <select
                   id="smoking"
@@ -289,7 +289,7 @@ const RiskEvaluation = () => {
               {/* Physical Activity */}
               <div>
                 <label htmlFor="physicalActivity" className="block text-sm font-medium text-gray-700 mb-2">
-                  Physical activity level
+                  {t('riskEvaluation.physicalActivityLabel')}
                 </label>
                 <select
                   id="physicalActivity"
@@ -298,16 +298,16 @@ const RiskEvaluation = () => {
                   onChange={handleChange}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
                 >
-                  <option value="Low">Low</option>
-                  <option value="Medium">Medium</option>
-                  <option value="High">High</option>
+                  <option value="Low">{t('riskEvaluation.low')}</option>
+                  <option value="Medium">{t('riskEvaluation.medium')}</option>
+                  <option value="High">{t('riskEvaluation.high')}</option>
                 </select>
               </div>
 
               {/* Memory Issues */}
               <div>
                 <label htmlFor="memoryIssues" className="block text-sm font-medium text-gray-700 mb-2">
-                  Memory issues recently noticed?
+                  {t('riskEvaluation.memoryIssuesLabel')}
                 </label>
                 <select
                   id="memoryIssues"
@@ -324,7 +324,7 @@ const RiskEvaluation = () => {
               {/* Self-Assessment */}
               <div>
                 <label htmlFor="selfAssessment" className="block text-sm font-medium text-gray-700 mb-2">
-                  Self-assessment: Trouble in focusing/remembering/planning (1-5)
+                  {t('riskEvaluation.selfAssessmentLabel')}
                 </label>
                 <div className="flex items-center gap-4">
                   <input
@@ -342,8 +342,8 @@ const RiskEvaluation = () => {
                   </span>
                 </div>
                 <div className="flex justify-between text-xs text-gray-500 mt-1">
-                  <span>1 - No trouble</span>
-                  <span>5 - Significant trouble</span>
+                  <span>{t('riskEvaluation.noTrouble')}</span>
+                  <span>{t('riskEvaluation.significantTrouble')}</span>
                 </div>
               </div>
 
@@ -353,7 +353,7 @@ const RiskEvaluation = () => {
                 className="w-full px-4 py-3 bg-primary-600 text-white rounded-lg hover:bg-primary-700 transition-colors font-medium flex items-center justify-center gap-2"
               >
                 <Calculator className="w-5 h-5" />
-                Calculate Risk Score
+                {t('riskEvaluation.calculateRiskScore')}
               </button>
             </form>
           </div>
@@ -362,7 +362,7 @@ const RiskEvaluation = () => {
           <div className="space-y-6">
             <div className={`bg-white shadow rounded-lg p-8 border-2 ${getRiskBgColor(riskResult.riskScore)}`}>
               <div className="text-center mb-6">
-                <h2 className="text-2xl font-bold text-gray-900 mb-4">Risk Assessment Result</h2>
+                <h2 className="text-2xl font-bold text-gray-900 mb-4">{t('riskEvaluation.riskAssessmentResult')}</h2>
                 <div className="mb-4">
                   <div className={`text-6xl font-bold ${getRiskColor(riskResult.riskScore)}`}>
                     {riskResult.riskScore}%
@@ -373,14 +373,14 @@ const RiskEvaluation = () => {
                       riskResult.category === 'Moderate' ? 'bg-yellow-100 text-yellow-800' :
                       'bg-red-100 text-red-800'
                     }`}>
-                      {riskResult.category} Risk
+                      {riskResult.category} {t('riskEvaluation.risk')}
                     </span>
                   </div>
                 </div>
               </div>
 
               <div className="bg-white rounded-lg p-6 mb-6">
-                <h3 className="text-lg font-semibold text-gray-900 mb-3">Recommendations</h3>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">{t('riskEvaluation.recommendations')}</h3>
                 <p className="text-gray-700 leading-relaxed">
                   {getRiskTips(riskResult.category)}
                 </p>
@@ -400,7 +400,7 @@ const RiskEvaluation = () => {
                   ) : (
                     <>
                       <CheckCircle className="w-5 h-5" />
-                      Save Risk Result
+                      {t('riskEvaluation.saveRiskResult')}
                     </>
                   )}
                 </button>
@@ -418,7 +418,7 @@ const RiskEvaluation = () => {
                   ) : (
                     <>
                       <Download className="w-5 h-5" />
-                      📄 Download Risk Report
+                      {t('riskEvaluation.downloadRiskReport')}
                     </>
                   )}
                 </button>
@@ -428,7 +428,7 @@ const RiskEvaluation = () => {
                   className="flex-1 px-4 py-3 bg-secondary-600 text-white rounded-lg hover:bg-secondary-700 transition-colors font-medium flex items-center justify-center gap-2"
                 >
                   <FileText className="w-5 h-5" />
-                  View Full Reports
+                  {t('riskEvaluation.viewFullReports')}
                 </button>
 
                 <button
@@ -436,7 +436,7 @@ const RiskEvaluation = () => {
                   className="flex-1 px-4 py-3 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium flex items-center justify-center gap-2"
                 >
                   <Home className="w-5 h-5" />
-                  Back to Dashboard
+                  {t('riskEvaluation.backToDashboard')}
                 </button>
               </div>
             </div>
@@ -450,7 +450,7 @@ const RiskEvaluation = () => {
                 }}
                 className="text-primary-600 hover:text-primary-700 font-medium"
               >
-                ← Retake Evaluation
+                {t('riskEvaluation.retakeEvaluation')}
               </button>
             </div>
         </div>

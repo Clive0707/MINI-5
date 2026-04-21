@@ -252,7 +252,7 @@ const Reports = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-primary-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading report data...</p>
+          <p className="text-gray-600">{t('reports.loadingReportData')}</p>
         </div>
       </div>
     );
@@ -264,12 +264,12 @@ const Reports = () => {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <AlertCircle className="w-12 h-12 text-red-500 mx-auto mb-4" />
-          <p className="text-gray-600">Failed to load report data</p>
+          <p className="text-gray-600">{t('reports.failedToLoad')}</p>
           <button
             onClick={fetchAllData}
             className="mt-4 px-4 py-2 bg-primary-600 text-white rounded-lg hover:bg-primary-700"
           >
-            Retry
+            {t('reports.retry')}
           </button>
         </div>
       </div>
@@ -284,7 +284,7 @@ const Reports = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-8 flex justify-between items-center">
-          <h1 className="text-3xl font-bold text-gray-900">Cognitive Health Report</h1>
+          <h1 className="text-3xl font-bold text-gray-900">{t('reports.cognitiveHealthReport')}</h1>
           <div className="flex gap-3 flex-wrap">
             <button
               onClick={handleGenerateComprehensiveReport}
@@ -292,7 +292,7 @@ const Reports = () => {
               className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FileText className="w-4 h-4" />
-              🧾 Generate Dementia Assessment Report
+              {t('reports.generateDementiaReport')}
             </button>
             <button
               onClick={handleClinicPDF}
@@ -300,7 +300,7 @@ const Reports = () => {
               className="flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FileText className="w-4 h-4" />
-              📋 Download Clinic Report
+              {t('reports.downloadClinicReport')}
             </button>
             <button
               onClick={handleDownloadReport}
@@ -310,12 +310,12 @@ const Reports = () => {
               {generatingPDF ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" />
-                  Generating...
+                  {t('reports.generating')}
                 </>
               ) : (
                 <>
                   <Download className="w-4 h-4" />
-                  📥 Download Full Report
+                  {t('reports.downloadFullReport')}
                 </>
               )}
             </button>
@@ -344,7 +344,7 @@ const Reports = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-3 mb-2">
               <User className="w-5 h-5 text-primary-600" />
-              <h3 className="text-sm font-medium text-gray-500">User Profile</h3>
+              <h3 className="text-sm font-medium text-gray-500">{t('reports.userProfile')}</h3>
             </div>
             <p className="text-2xl font-bold text-gray-900">{userProfile.name || 'N/A'}</p>
             <p className="text-sm text-gray-600 mt-1">
@@ -355,31 +355,31 @@ const Reports = () => {
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-3 mb-2">
               <BarChart3 className="w-5 h-5 text-primary-600" />
-              <h3 className="text-sm font-medium text-gray-500">Total Tests</h3>
+              <h3 className="text-sm font-medium text-gray-500">{t('reports.totalTests')}</h3>
             </div>
             <p className="text-2xl font-bold text-gray-900">{results.length}</p>
-            <p className="text-sm text-gray-600 mt-1">Tests completed</p>
+            <p className="text-sm text-gray-600 mt-1">{t('reports.testsCompleted')}</p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-3 mb-2">
               <TrendingUp className="w-5 h-5 text-primary-600" />
-              <h3 className="text-sm font-medium text-gray-500">Average Performance</h3>
+              <h3 className="text-sm font-medium text-gray-500">{t('reports.averagePerformance')}</h3>
             </div>
             <p className="text-2xl font-bold text-gray-900">{averagePerformance}%</p>
-            <p className="text-sm text-gray-600 mt-1">Overall score</p>
+            <p className="text-sm text-gray-600 mt-1">{t('reports.overallScore')}</p>
           </div>
 
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center gap-3 mb-2">
               <AlertCircle className="w-5 h-5 text-primary-600" />
-              <h3 className="text-sm font-medium text-gray-500">Current Risk</h3>
+              <h3 className="text-sm font-medium text-gray-500">{t('reports.currentRisk')}</h3>
             </div>
             <p className="text-2xl font-bold text-gray-900">
               {riskAssessment.category || 'N/A'}
             </p>
             <span className={`inline-block mt-1 px-2 py-1 rounded text-xs font-medium ${getRiskBadgeClasses(riskAssessment.category)}`}>
-              {riskAssessment.score ? `${riskAssessment.score}%` : 'Not assessed'}
+              {riskAssessment.score ? `${riskAssessment.score}%` : t('reports.notAssessed')}
             </span>
           </div>
         </div>
@@ -387,7 +387,7 @@ const Reports = () => {
         {/* Performance Trend Chart */}
         <div className="bg-white rounded-lg shadow p-6 mb-8">
           <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-900">Performance Trend</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('reports.performanceTrend')}</h2>
             <div className="flex gap-2">
               {['All', 'Memory', 'Attention', 'Reasoning'].map((f) => (
                 <button
@@ -424,7 +424,7 @@ const Reports = () => {
               </ResponsiveContainer>
             ) : (
               <div className="flex items-center justify-center h-full text-gray-500">
-                No data available for chart
+                {t('reports.noChartData')}
               </div>
             )}
           </div>
@@ -433,26 +433,26 @@ const Reports = () => {
         {/* Detailed Results Table */}
         <div className="bg-white rounded-lg shadow overflow-hidden">
           <div className="px-6 py-4 border-b border-gray-200">
-            <h2 className="text-xl font-bold text-gray-900">Detailed Test Results</h2>
+            <h2 className="text-xl font-bold text-gray-900">{t('reports.detailedTestResults')}</h2>
           </div>
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
                 <tr>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
+                    {t('reports.date')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Test Name
+                    {t('reports.testName')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Score (/10)
+                    {t('reports.score')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Percent
+                    {t('reports.percent')}
                   </th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Est. Risk (%)
+                    {t('reports.estRisk')}
                   </th>
                 </tr>
               </thead>
@@ -488,7 +488,7 @@ const Reports = () => {
                 ) : (
                   <tr>
                     <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
-                      No test results available
+                      {t('reports.noTestResults')}
                     </td>
                   </tr>
                 )}

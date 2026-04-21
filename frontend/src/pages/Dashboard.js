@@ -250,7 +250,7 @@ const Dashboard = () => {
       <div className="min-h-screen bg-gradient-to-br from-primary-50 via-secondary-50 to-accent-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your dashboard...</p>
+          <p className="text-gray-600">{t('dashboard.loadingDashboard')}</p>
         </div>
       </div>
     );
@@ -263,10 +263,10 @@ const Dashboard = () => {
         <div className="mb-8 flex items-center justify-between">
           <div>
             <h1 className="text-4xl font-display font-bold text-gray-900 mb-2">
-              Welcome back, {dashboardData.user_profile?.name || user?.first_name || 'User'}! 👋
+              {t('dashboard.welcomeBack', { name: dashboardData.user_profile?.name || user?.first_name || 'User' })} 👋
             </h1>
             <p className="text-xl text-gray-600">
-              Here's your cognitive health overview for today
+              {t('dashboard.cognitiveOverview')}
             </p>
           </div>
           <button
@@ -275,7 +275,7 @@ const Dashboard = () => {
             className="inline-flex items-center px-4 py-2 bg-primary-600 text-white rounded-xl hover:bg-primary-700 transition-colors disabled:opacity-50"
           >
             <RefreshCw className={`w-4 h-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
-            Refresh
+            {t('dashboard.refresh')}
           </button>
         </div>
 
@@ -291,8 +291,8 @@ const Dashboard = () => {
               </div>
               <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-primary-600 transition-colors duration-300" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Take a Test</h3>
-            <p className="text-gray-600 text-sm">Complete your scheduled cognitive assessment</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('dashboard.takeATest')}</h3>
+            <p className="text-gray-600 text-sm">{t('dashboard.takeTestDesc')}</p>
           </Link>
 
           <Link
@@ -305,8 +305,8 @@ const Dashboard = () => {
               </div>
               <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-secondary-600 transition-colors duration-300" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Risk Assessment</h3>
-            <p className="text-gray-600 text-sm">Evaluate your dementia risk factors</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('dashboard.riskAssessment')}</h3>
+            <p className="text-gray-600 text-sm">{t('dashboard.riskAssessmentDesc')}</p>
           </Link>
 
           <button
@@ -319,8 +319,8 @@ const Dashboard = () => {
               </div>
               <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-accent-600 transition-colors duration-300" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">View Reports</h3>
-            <p className="text-gray-600 text-sm">Check your detailed performance reports</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('dashboard.viewReports')}</h3>
+            <p className="text-gray-600 text-sm">{t('dashboard.viewReportsDesc')}</p>
           </button>
 
           <button
@@ -333,8 +333,8 @@ const Dashboard = () => {
               </div>
               <ArrowRight className="w-5 h-5 text-gray-400 group-hover:text-blue-600 transition-colors duration-300" />
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Schedule Reminders</h3>
-            <p className="text-gray-600 text-sm">Set up daily email notifications</p>
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">{t('dashboard.scheduleReminders')}</h3>
+            <p className="text-gray-600 text-sm">{t('dashboard.scheduleRemindersDesc')}</p>
           </button>
         </div>
 
@@ -345,9 +345,9 @@ const Dashboard = () => {
             {/* Performance Overview */}
             <div className="bg-white rounded-3xl p-8 shadow-soft">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-display font-bold text-gray-900">Performance Overview</h2>
+                <h2 className="text-2xl font-display font-bold text-gray-900">{t('dashboard.performanceOverview')}</h2>
                 <Link to="/reports" className="text-primary-600 hover:text-primary-700 font-medium text-sm">
-                  View Full Report →
+                  {t('dashboard.viewFullReport')}
                 </Link>
               </div>
               
@@ -388,8 +388,8 @@ const Dashboard = () => {
               ) : (
                 <div className="text-center py-12">
                   <BarChart3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No performance data yet</p>
-                  <p className="text-gray-400 text-sm">Complete your first test to see your progress</p>
+                  <p className="text-gray-500">{t('dashboard.noPerformanceData')}</p>
+                  <p className="text-gray-400 text-sm">{t('dashboard.completeFirstTest')}</p>
                 </div>
               )}
             </div>
@@ -397,9 +397,9 @@ const Dashboard = () => {
             {/* Recent Tests */}
             <div className="bg-white rounded-3xl p-8 shadow-soft">
               <div className="flex items-center justify-between mb-6">
-                <h2 className="text-2xl font-display font-bold text-gray-900">Recent Tests</h2>
+                <h2 className="text-2xl font-display font-bold text-gray-900">{t('dashboard.recentTests')}</h2>
                 <Link to="/tests" className="text-primary-600 hover:text-primary-700 font-medium text-sm">
-                  View All →
+                  {t('dashboard.viewAll')}
                 </Link>
               </div>
               
@@ -424,7 +424,7 @@ const Dashboard = () => {
                         <div className="text-2xl font-bold text-primary-600">
                           {test.percentage}%
                         </div>
-                        <div className="text-sm text-gray-500">Score</div>
+                        <div className="text-sm text-gray-500">{t('dashboard.score')}</div>
                       </div>
                     </div>
                   ))}
@@ -432,12 +432,12 @@ const Dashboard = () => {
               ) : (
                 <div className="text-center py-8">
                   <Brain className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                  <p className="text-gray-500">No tests completed yet</p>
+                  <p className="text-gray-500">{t('dashboard.noTestsCompleted')}</p>
                   <Link 
                     to="/tests" 
                     className="inline-flex items-center mt-3 text-primary-600 hover:text-primary-700 font-medium"
                   >
-                    Take Your First Test →
+                    {t('dashboard.takeFirstTest')}
                   </Link>
                 </div>
               )}
@@ -449,7 +449,7 @@ const Dashboard = () => {
             {/* Risk Score Card */}
             <div className="bg-white rounded-3xl p-6 shadow-soft">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Risk Assessment</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('dashboard.riskAssessment')}</h3>
                 {getRiskIcon(dashboardData.risk_assessment?.category)}
               </div>
               
@@ -459,24 +459,24 @@ const Dashboard = () => {
                 {dashboardData.risk_assessment.category || 'Unknown'}
               </div>
               <div className="text-sm text-gray-500 mb-4">
-                Risk Score: {dashboardData.risk_assessment.score || 'N/A'}
+                {t('dashboard.riskScore')}: {dashboardData.risk_assessment.score || 'N/A'}
               </div>
                   <Link 
                     to="/risk-evaluation" 
                     className="inline-flex items-center text-primary-600 hover:text-primary-700 text-sm font-medium"
                   >
-                    View Details →
+                    {t('dashboard.viewDetails')}
                   </Link>
                 </div>
               ) : (
                 <div className="text-center py-4">
                   <Target className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm mb-3">No risk assessment yet</p>
+                  <p className="text-gray-500 text-sm mb-3">{t('dashboard.noRiskAssessment')}</p>
                   <Link 
                     to="/risk-evaluation" 
                     className="inline-flex items-center text-primary-600 hover:text-primary-700 text-sm font-medium"
                   >
-                    Get Assessed →
+                    {t('dashboard.getAssessed')}
                   </Link>
                 </div>
               )}
@@ -485,7 +485,7 @@ const Dashboard = () => {
             {/* Next Scheduled Test */}
             <div className="bg-white rounded-3xl p-6 shadow-soft">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold text-gray-900">Next Test</h3>
+                <h3 className="text-lg font-semibold text-gray-900">{t('dashboard.nextTest')}</h3>
                 <Calendar className="w-5 h-5 text-gray-400" />
               </div>
               
@@ -504,18 +504,18 @@ const Dashboard = () => {
                     to="/tests" 
                     className="inline-flex items-center px-4 py-2 bg-primary-600 text-white text-sm font-medium rounded-xl hover:bg-primary-700 transition-colors duration-300"
                   >
-                    Start Test
+                    {t('dashboard.startTest')}
                   </Link>
                 </div>
               ) : (
                 <div className="text-center py-4">
                   <Clock className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm mb-3">No upcoming tests</p>
+                  <p className="text-gray-500 text-sm mb-3">{t('dashboard.noUpcomingTests')}</p>
                   <Link 
                     to="/tests" 
                     className="inline-flex items-center text-primary-600 hover:text-primary-700 text-sm font-medium"
                   >
-                    Schedule Test →
+                    {t('dashboard.scheduleTest')}
                   </Link>
                 </div>
               )}
@@ -523,21 +523,21 @@ const Dashboard = () => {
 
             {/* Quick Stats */}
             <div className="bg-white rounded-3xl p-6 shadow-soft">
-              <h3 className="text-lg font-semibold text-gray-900 mb-4">Quick Stats</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-4">{t('dashboard.quickStats')}</h3>
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Tests Completed</span>
+                  <span className="text-gray-600">{t('dashboard.testsCompleted')}</span>
                   <span className="font-semibold text-gray-900">{dashboardData.test_summary.total_tests}</span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Average Score</span>
+                  <span className="text-gray-600">{t('dashboard.averageScore')}</span>
                   <span className="font-semibold text-gray-900">
                     {dashboardData.test_summary.average_performance || 'N/A'}%
                   </span>
                 </div>
                 <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Streak</span>
-                  <span className="font-semibold text-gray-900">0 days</span>
+                  <span className="text-gray-600">{t('dashboard.streak')}</span>
+                  <span className="font-semibold text-gray-900">0 {t('dashboard.days')}</span>
                 </div>
               </div>
             </div>

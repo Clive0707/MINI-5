@@ -1,14 +1,17 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { CheckCircle, XCircle, Clock, Brain, ArrowLeft, TrendingUp, Award, Play, Target, Calendar, Plus, Trash2, Edit, X } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import api from '../../services/api';
 import toast from 'react-hot-toast';
 import TestResults from './TestResults';
 import notificationService from '../../services/notificationService';
 import { useAuth } from '../../contexts/AuthContext';
 
+
 // ===== BASE TEST COMPONENT =====
 const BaseTest = ({ testType, testName, instructions, children, onTestComplete, maxScore = 10, timeLimit = null }) => {
+  const { t } = useTranslation();
   const [currentStep, setCurrentStep] = useState('instructions'); // instructions, test, results
   const [startTime, setStartTime] = useState(null);
   const [testResult, setTestResult] = useState(null);
@@ -73,11 +76,11 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
   }, [onTestComplete, maxScore, startTime, testType, user]);
 
   const handleQuit = useCallback(() => {
-    const confirmQuit = window.confirm('Are you sure you want to quit? Unsaved progress will be lost.');
+    const confirmQuit = window.confirm(t('testContent.quitConfirm'));
     if (confirmQuit) {
       navigate('/dashboard');
     }
-  }, [navigate]);
+  }, [navigate, t]);
 
   const saveAndReturn = async () => {
     if (!testResult) return;
@@ -148,7 +151,7 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
               </h1>
               <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary-100 text-primary-700 text-sm font-medium">
                 <Clock className="w-4 h-4 mr-2" />
-                {timeLimit ? `${timeLimit} minutes` : 'Untimed'}
+                {timeLimit ? `${timeLimit} minutes` : t('testContent.untimed')}
               </div>
             </div>
 
@@ -163,22 +166,22 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
                 <div className="w-12 h-12 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                   <Target className="w-6 h-6 text-primary-600" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-1">Objective</h3>
-                <p className="text-sm text-gray-600">Complete the test accurately</p>
+                <h3 className="font-semibold text-gray-900 mb-1">{t('testContent.objective')}</h3>
+                <p className="text-sm text-gray-600">{t('testContent.objectiveDesc')}</p>
               </div>
               <div className="text-center p-6 bg-gray-50 rounded-2xl">
                 <div className="w-12 h-12 bg-secondary-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                   <TrendingUp className="w-6 h-6 text-secondary-600" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-1">Scoring</h3>
-                <p className="text-sm text-gray-600">0-10 scale based on accuracy</p>
+                <h3 className="font-semibold text-gray-900 mb-1">{t('testContent.scoring')}</h3>
+                <p className="text-sm text-gray-600">{t('testContent.scoringDesc')}</p>
               </div>
               <div className="text-center p-6 bg-gray-50 rounded-2xl">
                 <div className="w-12 h-12 bg-accent-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
                   <Award className="w-6 h-6 text-accent-600" />
                 </div>
-                <h3 className="font-semibold text-gray-900 mb-1">Reward</h3>
-                <p className="text-sm text-gray-600">Track your progress</p>
+                <h3 className="font-semibold text-gray-900 mb-1">{t('testContent.reward')}</h3>
+                <p className="text-sm text-gray-600">{t('testContent.rewardDesc')}</p>
               </div>
             </div>
 
@@ -189,14 +192,14 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
                 className="inline-flex items-center justify-center px-8 py-4 bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-semibold rounded-2xl shadow-soft hover:shadow-medium transition-all duration-300 transform hover:-translate-y-1"
               >
                 <Play className="w-5 h-5 mr-2" />
-                Start Test
+                {t('testContent.startTest')}
               </button>
               <button
                 onClick={() => navigate('/tests')}
                 className="inline-flex items-center justify-center px-8 py-4 border-2 border-primary-200 text-primary-700 font-semibold rounded-2xl hover:bg-primary-50 transition-all duration-300"
               >
                 <ArrowLeft className="w-5 h-5 mr-2" />
-                Back to Tests
+                {t('testContent.backToTests')}
               </button>
             </div>
           </div>
@@ -222,10 +225,10 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
                   {timeLimit && (
                     <div className="flex items-center space-x-2 text-sm text-gray-600">
                       <Clock className="w-4 h-4" />
-                      <span>Time remaining: {timeLimit}:00</span>
+                      <span>{t('testContent.timeRemaining')}: {timeLimit}:00</span>
                     </div>
                   )}
-                  <button onClick={handleQuit} className="px-4 py-2 text-sm font-semibold text-danger-700 border border-danger-200 rounded-xl hover:bg-danger-50">Quit</button>
+                  <button onClick={handleQuit} className="px-4 py-2 text-sm font-semibold text-danger-700 border border-danger-200 rounded-xl hover:bg-danger-50">{t('testContent.quit')}</button>
                 </div>
               </div>
               <div className="w-full bg-gray-200 rounded-full h-2">
@@ -278,6 +281,7 @@ const BaseTest = ({ testType, testName, instructions, children, onTestComplete, 
 
 // ===== PATTERN RECOGNITION TEST =====
 const PatternRecognitionTest = ({ onTestComplete }) => {
+  const { t } = useTranslation();
   const [currentTrial, setCurrentTrial] = useState(0);
   const [score, setScore] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -343,44 +347,44 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
   const instructions = (
     <div className="space-y-4">
       <p>
-        This test measures your <strong>pattern recognition and logical reasoning</strong>. You will see sequences of numbers and need to identify the pattern.
+        {t('testContent.pattern.measures')} <strong>{t('testContent.pattern.patternRecognition')}</strong>{t('testContent.pattern.measures2')}
       </p>
       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-        <h3 className="font-semibold text-blue-800 mb-2">📝 Test Instructions:</h3>
+        <h3 className="font-semibold text-blue-800 mb-2">{t('testContent.pattern.instructionTitle')}</h3>
         <p className="text-blue-700">
-          Look at the sequence of numbers and identify the <strong>next number</strong> in the pattern.
+          {t('testContent.pattern.instructionText')}
         </p>
       </div>
       
       <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-        <h3 className="font-semibold text-yellow-800 mb-2">💡 Example:</h3>
+        <h3 className="font-semibold text-yellow-800 mb-2">{t('testContent.pattern.exampleTitle')}</h3>
         <div className="space-y-2">
           <div className="text-center p-3 bg-white rounded border">
-            <p className="text-lg font-mono">2, 4, 6, 8, 10, ?</p>
-            <p className="text-sm text-gray-600 mt-1">Pattern: Add 2 each time</p>
-            <p className="text-sm text-gray-600">Answer: 12</p>
+            <p className="text-lg font-mono">{t('testContent.pattern.examplePattern')}</p>
+            <p className="text-sm text-gray-600 mt-1">{t('testContent.pattern.examplePatternDesc')}</p>
+            <p className="text-sm text-gray-600">{t('testContent.pattern.exampleAnswer')}</p>
           </div>
         </div>
       </div>
       
       <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-        <h3 className="font-semibold text-green-800 mb-2">🎯 What to do:</h3>
+        <h3 className="font-semibold text-green-800 mb-2">{t('testContent.pattern.whatToDoTitle')}</h3>
         <ul className="list-disc list-inside space-y-1 text-green-700">
-          <li>Study the sequence of numbers</li>
-          <li>Identify the mathematical pattern</li>
-          <li>Choose the next number from the options</li>
-          <li>You have {trialTime} seconds per trial</li>
-          <li>Complete all {trials.length} trials</li>
+          <li>{t('testContent.pattern.studySequence')}</li>
+          <li>{t('testContent.pattern.identifyPattern')}</li>
+          <li>{t('testContent.pattern.chooseNext')}</li>
+          <li>{t('testContent.pattern.youHaveSeconds', { seconds: trialTime })}</li>
+          <li>{t('testContent.pattern.completeAllTrials', { total: trials.length })}</li>
         </ul>
       </div>
       
       <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
-        <h3 className="font-semibold text-purple-800 mb-2">🧮 Common Patterns:</h3>
+        <h3 className="font-semibold text-purple-800 mb-2">{t('testContent.pattern.commonPatternsTitle')}</h3>
         <ul className="list-disc list-inside space-y-1 text-purple-700">
-          <li>Arithmetic: Adding/subtracting the same number</li>
-          <li>Geometric: Multiplying/dividing by the same number</li>
-          <li>Quadratic: Square numbers, cube numbers</li>
-          <li>Fibonacci: Each number is the sum of the previous two</li>
+          <li>{t('testContent.pattern.arithmetic')}</li>
+          <li>{t('testContent.pattern.geometric')}</li>
+          <li>{t('testContent.pattern.quadratic')}</li>
+          <li>{t('testContent.pattern.fibonacci')}</li>
         </ul>
       </div>
     </div>
@@ -394,8 +398,8 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
     setFeedback({
       correct: isCorrect,
       message: isCorrect 
-        ? 'Correct!' 
-        : `Incorrect. The answer was ${currentTrialData.correctAnswer}. Pattern: ${currentTrialData.explanation}`
+        ? t('testContent.correct') 
+        : t('testContent.incorrect', { answer: currentTrialData.correctAnswer, explanation: currentTrialData.explanation })
     });
     setShowFeedback(true);
 
@@ -443,7 +447,7 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
           const currentTrialData = trials[currentTrial];
           setFeedback({
             correct: false,
-            message: `Time's up! The answer was ${currentTrialData.correctAnswer}. Pattern: ${currentTrialData.explanation}`
+            message: t('testContent.timesUp', { answer: currentTrialData.correctAnswer, explanation: currentTrialData.explanation })
           });
           setShowFeedback(true);
           
@@ -474,6 +478,7 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
 
       return () => clearTimeout(timer);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrial, timeLeft, showFeedback, trials, score, trialTime, feedbackTime]);
 
   // Initialize first trial
@@ -495,7 +500,7 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
       <div className="text-center">
         <div className="mb-8">
           <div className="text-sm text-gray-500 mb-2">
-            Trial {currentTrial + 1} of {trials.length}
+            {t('testContent.trialOf', { current: currentTrial + 1, total: trials.length })}
           </div>
           <div className="text-2xl text-gray-600 mb-4">
             <Clock className="inline-block w-6 h-6 mr-2" />
@@ -514,7 +519,7 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
             <span className="text-blue-600">, ?</span>
           </div>
           <p className="text-gray-600 text-lg">
-            What comes next in this pattern?
+            {t('testContent.whatComesNext')}
           </p>
         </div>
         
@@ -574,6 +579,7 @@ const PatternRecognitionTest = ({ onTestComplete }) => {
 
 // ===== STROOP TEST =====
 const StroopTest = ({ onTestComplete }) => {
+  const { t } = useTranslation();
   const [currentTrial, setCurrentTrial] = useState(0);
   const [correctCount, setCorrectCount] = useState(0);
   const [timeLeft, setTimeLeft] = useState(0);
@@ -608,32 +614,32 @@ const StroopTest = ({ onTestComplete }) => {
   const instructions = (
     <div className="space-y-4">
       <p>
-        This test measures your <strong>attention and cognitive control</strong>. You will see color words written in different colored text.
+        {t('testContent.stroop.measures')} <strong>{t('testContent.stroop.attentionControl')}</strong>{t('testContent.stroop.measures2')}
       </p>
       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-        <h3 className="font-semibold text-blue-800 mb-2">📝 Test Instructions:</h3>
+        <h3 className="font-semibold text-blue-800 mb-2">{t('testContent.stroop.instructionTitle')}</h3>
         <p className="text-blue-700">
-          <strong>Ignore the word itself</strong> and identify the <strong>color of the text</strong>.
+          <strong>{t('testContent.stroop.ignoreWord')}</strong> {t('testContent.stroop.identifyColor')} <strong>{t('testContent.stroop.colorOfText')}</strong>.
         </p>
       </div>
       
       <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-        <h3 className="font-semibold text-yellow-800 mb-2">💡 Example:</h3>
+        <h3 className="font-semibold text-yellow-800 mb-2">{t('testContent.stroop.exampleTitle')}</h3>
         <div className="space-y-2">
           <div className="text-center p-3 bg-white rounded border">
             <span style={{ color: 'blue' }} className="text-2xl font-bold">RED</span>
-            <p className="text-sm text-gray-600 mt-1">Answer: BLUE (the color of the text)</p>
+            <p className="text-sm text-gray-600 mt-1">{t('testContent.stroop.exampleAnswer')}</p>
           </div>
         </div>
       </div>
       
       <div className="bg-green-50 p-4 rounded-lg border border-green-200">
-        <h3 className="font-semibold text-green-800 mb-2">🎯 What to do:</h3>
+        <h3 className="font-semibold text-green-800 mb-2">{t('testContent.stroop.whatToDoTitle')}</h3>
         <ul className="list-disc list-inside space-y-1 text-green-700">
-          <li>Look at the color of the text (not the word)</li>
-          <li>Click the button with the correct color name</li>
-          <li>You have {trialTime} seconds per trial</li>
-          <li>Complete all {trials.length} trials</li>
+          <li>{t('testContent.stroop.lookAtColor')}</li>
+          <li>{t('testContent.stroop.clickCorrectColor')}</li>
+          <li>{t('testContent.stroop.youHaveSeconds', { seconds: trialTime })}</li>
+          <li>{t('testContent.stroop.completeAllTrials', { total: trials.length })}</li>
         </ul>
       </div>
     </div>
@@ -660,7 +666,7 @@ const StroopTest = ({ onTestComplete }) => {
     setUserAnswer(selectedColor);
     setFeedback({
       correct: isCorrect,
-      message: isCorrect ? 'Correct!' : `Incorrect. The text color was ${currentTrialData.correctAnswer}.`
+      message: isCorrect ? t('testContent.correct') : t('testContent.incorrectColor', { color: currentTrialData.correctAnswer })
     });
     setShowFeedback(true);
 
@@ -716,7 +722,7 @@ const StroopTest = ({ onTestComplete }) => {
           // Time's up - mark as incorrect and move to next trial
           setFeedback({
             correct: false,
-            message: `Time's up! The text color was ${trials[currentTrial].correctAnswer}.`
+            message: t('testContent.timesUpColor', { color: trials[currentTrial].correctAnswer })
           });
           setShowFeedback(true);
           
@@ -758,6 +764,7 @@ const StroopTest = ({ onTestComplete }) => {
 
       return () => clearTimeout(timer);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentTrial, timeLeft, showFeedback, trials, correctCount, responseTimes, trialTime, feedbackTime]);
 
   // Initialize first trial
@@ -780,7 +787,7 @@ const StroopTest = ({ onTestComplete }) => {
       <div className="text-center">
         <div className="mb-8">
           <div className="text-sm text-gray-500 mb-2">
-            Trial {currentTrial + 1} of {trials.length}
+            {t('testContent.trialOf', { current: currentTrial + 1, total: trials.length })}
           </div>
           <div className="text-2xl text-gray-600 mb-4">
             <Clock className="inline-block w-6 h-6 mr-2" />
@@ -793,7 +800,7 @@ const StroopTest = ({ onTestComplete }) => {
             {trial.word}
           </div>
           <p className="text-gray-600 text-lg">
-            What color is the text?
+            {t('testContent.whatColorIsText')}
           </p>
         </div>
         
@@ -811,7 +818,7 @@ const StroopTest = ({ onTestComplete }) => {
                   : 'btn-outline hover:btn-primary'
               }`}
             >
-              {color}
+              {t(`testContent.colors.${color}`)}
             </button>
           ))}
         </div>
@@ -853,189 +860,218 @@ const StroopTest = ({ onTestComplete }) => {
 
 // ===== WORD RECALL TEST =====
 const WordRecallTest = ({ onTestComplete }) => {
-  const [currentPhase, setCurrentPhase] = useState('study'); // study, delay, recall
+  const { t } = useTranslation();
+  // Phases: study1 → recall1 → between → study2 → recall2
+  const [currentPhase, setCurrentPhase] = useState('study1');
   const [currentWordIndex, setCurrentWordIndex] = useState(0);
-  const [userInputs, setUserInputs] = useState([]);
+  const [round1Inputs, setRound1Inputs] = useState([]);
+  const [round2Inputs, setRound2Inputs] = useState([]);
   const [timeLeft, setTimeLeft] = useState(0);
 
   // Test configuration
-  const words = useMemo(() => [
+  const allWords = useMemo(() => [
     'apple', 'river', 'mountain', 'ocean', 'forest',
     'sunset', 'bridge', 'garden', 'castle', 'star'
   ], []);
-  const studyTime = 3; // seconds per word
-  const delayTime = 10; // seconds delay before recall
+
+  const round1Words = useMemo(() => allWords.slice(0, 5), [allWords]);
+  const round2Words = useMemo(() => allWords.slice(5), [allWords]);
+
+  const studyTime = 3;   // seconds per word
+  const betweenTime = 5; // seconds between rounds
 
   const instructions = (
     <div className="space-y-4">
       <p>
-        This test measures your <strong>memory and recall abilities</strong>. You will see a series of words one at a time.
+        {t('testContent.wordRecall.measures')} <strong>{t('testContent.wordRecall.memoryRecall')}</strong>{t('testContent.wordRecall.measures2')}
       </p>
       <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
-        <h3 className="font-semibold text-blue-800 mb-2">📝 Test Structure:</h3>
+        <h3 className="font-semibold text-blue-800 mb-2">{t('testContent.wordRecall.structureTitle')}</h3>
         <ol className="list-decimal list-inside space-y-1 text-blue-700">
-          <li><strong>Study Phase:</strong> You'll see {words.length} words, one every {studyTime} seconds</li>
-          <li><strong>Delay Phase:</strong> {delayTime} second break to clear your mind</li>
-          <li><strong>Recall Phase:</strong> Type as many words as you can remember</li>
+          <li><strong>Round 1:</strong> Study 5 words → Recall them</li>
+          <li><strong>5 second break</strong> before Round 2</li>
+          <li><strong>Round 2:</strong> Study 5 new words → Recall them</li>
+          <li>Combined score from both rounds</li>
         </ol>
       </div>
       <div className="bg-yellow-50 p-4 rounded-lg border border-yellow-200">
-        <h3 className="font-semibold text-yellow-800 mb-2">💡 Tips:</h3>
+        <h3 className="font-semibold text-yellow-800 mb-2">{t('testContent.wordRecall.tipsTitle')}</h3>
         <ul className="list-disc list-inside space-y-1 text-yellow-700">
-          <li>Pay attention to each word as it appears</li>
-          <li>Try to create mental associations or stories</li>
-          <li>Don't worry about spelling - close matches count</li>
+          <li>{t('testContent.wordRecall.tip1')}</li>
+          <li>{t('testContent.wordRecall.tip2')}</li>
+          <li>{t('testContent.wordRecall.tip3')}</li>
         </ul>
       </div>
     </div>
   );
 
-
-
-  const startDelayPhase = useCallback(() => {
-    setCurrentPhase('delay');
-    setTimeLeft(delayTime);
+  // ---- Phase transitions ----
+  const startRecall1 = useCallback(() => {
+    setCurrentPhase('recall1');
+    setRound1Inputs(new Array(5).fill(''));
   }, []);
 
-  const startRecallPhase = useCallback(() => {
-    setCurrentPhase('recall');
-    setUserInputs(new Array(words.length).fill(''));
-  }, [words.length]);
+  const startBetween = useCallback(() => {
+    setCurrentPhase('between');
+    setTimeLeft(betweenTime);
+  }, []);
 
-  const handleWordInput = (index, value) => {
-    const newInputs = [...userInputs];
-    newInputs[index] = value;
-    setUserInputs(newInputs);
+  const startStudy2 = useCallback(() => {
+    setCurrentPhase('study2');
+    setCurrentWordIndex(0);
+    setTimeLeft(studyTime);
+  }, [studyTime]);
+
+  const startRecall2 = useCallback(() => {
+    setCurrentPhase('recall2');
+    setRound2Inputs(new Array(5).fill(''));
+  }, []);
+
+  // ---- Input handlers ----
+  const handleRound1Input = (index, value) => {
+    const next = [...round1Inputs];
+    next[index] = value;
+    setRound1Inputs(next);
   };
 
-  const handleRecallComplete = (onTestComplete) => {
-    const correctWords = words.map(w => w.toLowerCase());
-    const recalled = userInputs.map(i => i.trim().toLowerCase()).filter(Boolean);
-    const matched = new Set();
+  const handleRound2Input = (index, value) => {
+    const next = [...round2Inputs];
+    next[index] = value;
+    setRound2Inputs(next);
+  };
 
+  // ---- Scoring ----
+  const matchWords = (inputs, targetWords) => {
+    const correct = targetWords.map(w => w.toLowerCase());
+    const recalled = inputs.map(i => i.trim().toLowerCase()).filter(Boolean);
+    const matched = new Set();
     for (const rec of recalled) {
-      for (const cor of correctWords) {
+      for (const cor of correct) {
         if (rec === cor || rec.startsWith(cor.slice(0, 3)) || cor.startsWith(rec.slice(0, 3))) {
           matched.add(cor);
           break;
         }
       }
     }
+    return matched.size;
+  };
 
-    const correctCount = matched.size;
-    const score = Number(((correctCount / words.length) * 10).toFixed(2));
+  const handleFinalSubmit = (onTestComplete) => {
+    const r1Correct = matchWords(round1Inputs, round1Words);
+    const r2Correct = matchWords(round2Inputs, round2Words);
+    const totalCorrect = r1Correct + r2Correct;
+    const score = Number(((totalCorrect / allWords.length) * 10).toFixed(2));
 
-    console.log("✅ Recall Done:", { correctCount, score });
+    console.log('✅ HVLT-R Done:', { r1Correct, r2Correct, totalCorrect, score });
 
     if (onTestComplete) {
       onTestComplete({
         finalScore: score,
-        metadata: { totalTrials: words.length, correctResponses: correctCount }
+        metadata: {
+          totalTrials: allWords.length,
+          correctResponses: totalCorrect,
+          round1Correct: r1Correct,
+          round2Correct: r2Correct,
+        }
       });
     }
   };
 
-  // Timer effects
+  // ---- Study phase timer ----
   useEffect(() => {
-    if (currentPhase === 'study' && currentWordIndex < words.length) {
+    if ((currentPhase === 'study1' || currentPhase === 'study2') && timeLeft > 0) {
       const timer = setTimeout(() => {
         if (timeLeft > 1) {
-          setTimeLeft(timeLeft - 1);
+          setTimeLeft(prev => prev - 1);
         } else {
-          if (currentWordIndex < words.length - 1) {
-            setCurrentWordIndex(currentWordIndex + 1);
+          // Move to next word or end round
+          const roundWords = currentPhase === 'study1' ? round1Words : round2Words;
+          if (currentWordIndex < roundWords.length - 1) {
+            setCurrentWordIndex(prev => prev + 1);
             setTimeLeft(studyTime);
           } else {
-            startDelayPhase();
+            if (currentPhase === 'study1') startRecall1();
+            else startRecall2();
           }
         }
       }, 1000);
-
       return () => clearTimeout(timer);
     }
-  }, [currentPhase, currentWordIndex, timeLeft, startDelayPhase, words.length, studyTime]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPhase, currentWordIndex, timeLeft]);
 
+  // ---- Between-rounds countdown ----
   useEffect(() => {
-    if (currentPhase === 'delay') {
+    if (currentPhase === 'between' && timeLeft > 0) {
       const timer = setTimeout(() => {
-        if (timeLeft > 1) {
-          setTimeLeft(timeLeft - 1);
-        } else {
-          startRecallPhase();
-        }
+        if (timeLeft > 1) setTimeLeft(prev => prev - 1);
+        else startStudy2();
       }, 1000);
-
       return () => clearTimeout(timer);
     }
-  }, [currentPhase, timeLeft, startRecallPhase]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentPhase, timeLeft]);
 
-  // Initialize first word
+  // ---- Init first word ----
   useEffect(() => {
-    if (currentPhase === 'study' && currentWordIndex === 0 && timeLeft === 0) {
+    if ((currentPhase === 'study1') && currentWordIndex === 0 && timeLeft === 0) {
       setTimeLeft(studyTime);
     }
   }, [currentPhase, currentWordIndex, timeLeft, studyTime]);
 
-  const renderStudyPhase = () => (
-    <div className="text-center">
-      <div className="mb-8">
-        <div className="text-sm text-gray-500 mb-2">Word {currentWordIndex + 1} of {words.length}</div>
-        <div className="text-2xl text-gray-600 mb-4">
+  // ---- Render helpers ----
+  const renderStudyPhase = (round) => {
+    const roundWords = round === 1 ? round1Words : round2Words;
+    return (
+      <div className="text-center">
+        {/* Round badge */}
+        <div className="inline-flex items-center px-4 py-1 rounded-full bg-primary-100 text-primary-700 text-sm font-semibold mb-6">
+          Round {round} of 2 — Word {currentWordIndex + 1} of {roundWords.length}
+        </div>
+
+        <div className="mb-4 text-2xl text-gray-600">
           <Clock className="inline-block w-6 h-6 mr-2" />
           {timeLeft}s
         </div>
-      </div>
-      
-      <div className="text-6xl font-bold text-blue-600 mb-8 animate-pulse">
-        {words[currentWordIndex]}
-      </div>
-      
-      <div className="text-gray-600">
-        Memorize this word. You'll be asked to recall it later.
-      </div>
-    </div>
-  );
 
-  const renderDelayPhase = () => (
-    <div className="text-center">
-      <div className="mb-8">
-        <Brain className="w-16 h-16 text-purple-500 mx-auto mb-4" />
-        <h3 className="text-2xl font-semibold text-gray-900 mb-4">
-          Processing Time
-        </h3>
-        <div className="text-4xl font-bold text-purple-600 mb-4">
-          {timeLeft}s
+        <div className="text-7xl font-bold text-blue-600 mb-8 animate-pulse tracking-widest">
+          {roundWords[currentWordIndex]}
         </div>
-        <p className="text-gray-600">
-          Take a moment to clear your mind. The recall phase will begin shortly.
-        </p>
-      </div>
-    </div>
-  );
 
-  const renderRecallPhase = (onTestComplete) => (
+        <div className="text-gray-500 text-sm">{t('testContent.memorizeWord')}</div>
+      </div>
+    );
+  };
+
+  const renderRecallPhase = (round, inputs, handleInput, onSubmit) => (
     <div>
       <div className="text-center mb-8">
-        <h3 className="text-2xl font-semibold text-gray-900 mb-4">
-          📝 Recall the Words
+        <div className="inline-flex items-center px-4 py-1 rounded-full bg-green-100 text-green-700 text-sm font-semibold mb-4">
+          Round {round} Recall
+        </div>
+        <h3 className="text-2xl font-semibold text-gray-900 mb-2">
+          {t('testContent.recallTheWords')}
         </h3>
-        <p className="text-gray-600">
-          Type as many words as you can remember from the study phase.
+        <p className="text-gray-500 text-sm">
+          {round === 1
+            ? 'Type the 5 words from Round 1 that you remember.'
+            : 'Type the 5 words from Round 2 that you remember.'}
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        {words.map((word, index) => (
-          <div key={index} className="space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8 max-w-lg mx-auto">
+        {[0, 1, 2, 3, 4].map((index) => (
+          <div key={index} className="space-y-1">
             <label className="block text-sm font-medium text-gray-700">
-              Word {index + 1}:
+              {t('testContent.wordLabel', { number: index + 1 })}
             </label>
             <input
               type="text"
-              value={userInputs[index] || ""}
-              onChange={(e) => handleWordInput(index, e.target.value)}
+              value={inputs[index] || ''}
+              onChange={(e) => handleInput(index, e.target.value)}
               className="input w-full"
-              placeholder="Type the word you remember..."
+              placeholder={t('testContent.typeWordRemember')}
+              autoComplete="off"
             />
           </div>
         ))}
@@ -1043,12 +1079,24 @@ const WordRecallTest = ({ onTestComplete }) => {
 
       <div className="text-center">
         <button
-          onClick={() => handleRecallComplete(onTestComplete)}
+          onClick={onSubmit}
           className="btn btn-primary btn-lg px-8 py-4 text-lg font-semibold"
         >
-          ✅ Complete Recall
+          {round === 1 ? '✅ Submit Round 1 & Continue' : t('testContent.completeRecall')}
         </button>
       </div>
+    </div>
+  );
+
+  const renderBetweenRounds = () => (
+    <div className="text-center">
+      <div className="inline-flex items-center px-4 py-1 rounded-full bg-yellow-100 text-yellow-700 text-sm font-semibold mb-6">
+        Get Ready for Round 2
+      </div>
+      <Brain className="w-16 h-16 text-purple-500 mx-auto mb-4 animate-pulse" />
+      <h3 className="text-2xl font-semibold text-gray-900 mb-4">Round 2 starts in...</h3>
+      <div className="text-6xl font-bold text-purple-600 mb-4">{timeLeft}</div>
+      <p className="text-gray-500 text-sm">5 new words are coming. Stay focused!</p>
     </div>
   );
 
@@ -1058,13 +1106,19 @@ const WordRecallTest = ({ onTestComplete }) => {
       testName="Hopkins Verbal Learning Test–Revised (HVLT-R)"
       instructions={instructions}
       maxScore={10}
-      timeLimit={Math.ceil((words.length * studyTime + delayTime) / 60)}
+      timeLimit={Math.ceil((allWords.length * studyTime + betweenTime) / 60)}
     >
       {({ onTestComplete }) => (
         <>
-          {currentPhase === "study" && renderStudyPhase()}
-          {currentPhase === "delay" && renderDelayPhase()}
-          {currentPhase === "recall" && renderRecallPhase(onTestComplete)}
+          {currentPhase === 'study1' && renderStudyPhase(1)}
+          {currentPhase === 'recall1' && renderRecallPhase(
+            1, round1Inputs, handleRound1Input, startBetween
+          )}
+          {currentPhase === 'between' && renderBetweenRounds()}
+          {currentPhase === 'study2' && renderStudyPhase(2)}
+          {currentPhase === 'recall2' && renderRecallPhase(
+            2, round2Inputs, handleRound2Input, () => handleFinalSubmit(onTestComplete)
+          )}
         </>
       )}
     </BaseTest>
@@ -1073,6 +1127,7 @@ const WordRecallTest = ({ onTestComplete }) => {
 
 // ===== TEST SCHEDULER =====
 const TestScheduler = () => {
+  const { t } = useTranslation();
   const [schedules, setSchedules] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -1092,14 +1147,15 @@ const TestScheduler = () => {
   ];
 
   const frequencies = [
-    { value: 'daily', label: 'Daily', description: 'Every day' },
-    { value: 'weekly', label: 'Weekly', description: 'Once a week' },
-    { value: 'bi_weekly', label: 'Bi-weekly', description: 'Every 2 weeks' },
-    { value: 'monthly', label: 'Monthly', description: 'Once a month' }
+    { value: 'daily', label: t('testContent.scheduler.daily'), description: t('testContent.scheduler.everyDay') },
+    { value: 'weekly', label: t('testContent.scheduler.weekly'), description: t('testContent.scheduler.onceAWeek') },
+    { value: 'bi_weekly', label: t('testContent.scheduler.biWeekly'), description: t('testContent.scheduler.everyTwoWeeks') },
+    { value: 'monthly', label: t('testContent.scheduler.monthly'), description: t('testContent.scheduler.onceAMonth') }
   ];
 
   useEffect(() => {
     fetchSchedules();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchSchedules = async () => {
@@ -1108,7 +1164,7 @@ const TestScheduler = () => {
       setSchedules(response.data.schedules || []);
     } catch (error) {
       console.error('Error fetching schedules:', error);
-      toast.error('Failed to load test schedules');
+      toast.error(t('testContent.scheduler.failedLoad'));
     } finally {
       setLoading(false);
     }
@@ -1118,17 +1174,17 @@ const TestScheduler = () => {
     e.preventDefault();
     
     if (!formData.test_type || !formData.scheduled_date) {
-      toast.error('Please fill in all required fields');
+      toast.error(t('testContent.scheduler.fillRequired'));
       return;
     }
 
     try {
       if (editingSchedule) {
         await api.put(`/users/test-schedule/${editingSchedule.id}`, formData);
-        toast.success('Schedule updated successfully!');
+        toast.success(t('testContent.scheduler.updateSuccess'));
       } else {
         await api.post('/users/schedule-test', formData);
-        toast.success('Test scheduled successfully!');
+        toast.success(t('testContent.scheduler.scheduleSuccess'));
       }
       
       setShowForm(false);
@@ -1137,7 +1193,7 @@ const TestScheduler = () => {
       fetchSchedules();
     } catch (error) {
       console.error('Error saving schedule:', error);
-      toast.error('Failed to save schedule');
+      toast.error(t('testContent.scheduler.failedSave'));
     }
   };
 
@@ -1154,14 +1210,14 @@ const TestScheduler = () => {
   };
 
   const handleDelete = async (scheduleId) => {
-    if (window.confirm('Are you sure you want to delete this schedule?')) {
+    if (window.confirm(t('testContent.scheduler.deleteConfirm'))) {
       try {
         await api.delete(`/users/test-schedule/${scheduleId}`);
-        toast.success('Schedule deleted successfully!');
+        toast.success(t('testContent.scheduler.deleteSuccess'));
         fetchSchedules();
       } catch (error) {
         console.error('Error deleting schedule:', error);
-        toast.error('Failed to delete schedule');
+        toast.error(t('testContent.scheduler.failedDelete'));
       }
     }
   };
@@ -1186,7 +1242,7 @@ const TestScheduler = () => {
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading schedules...</p>
+          <p className="text-gray-600">{t('testContent.scheduler.loadingSchedules')}</p>
         </div>
       </div>
     );
@@ -1197,7 +1253,7 @@ const TestScheduler = () => {
       {/* Header */}
       <div className="text-center">
         <h2 className="text-3xl font-display font-bold text-gray-900 mb-4">
-          Test Scheduler
+          {t('testContent.scheduler.title')}
         </h2>
         <p className="text-lg text-gray-600 max-w-2xl mx-auto">
           Schedule regular cognitive assessments to maintain consistent monitoring of your brain health. 
@@ -1212,7 +1268,7 @@ const TestScheduler = () => {
           className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-semibold rounded-2xl shadow-soft hover:shadow-medium transition-all duration-300 transform hover:-translate-y-1"
         >
           <Plus className="w-5 h-5 mr-2" />
-          Schedule New Test
+          {t('testContent.scheduler.addSchedule')}
         </button>
       </div>
 
@@ -1221,7 +1277,7 @@ const TestScheduler = () => {
         <div className="bg-white rounded-3xl p-8 shadow-soft animate-slide-up">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-2xl font-display font-bold text-gray-900">
-              {editingSchedule ? 'Edit Schedule' : 'Schedule New Test'}
+              {editingSchedule ? t('testContent.scheduler.editSchedule') : t('testContent.scheduler.scheduleTest')}
             </h3>
             <button
               onClick={() => {
@@ -1240,7 +1296,7 @@ const TestScheduler = () => {
               {/* Test Type */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Test Type *
+                  {t('testContent.scheduler.testType')} *
                 </label>
                 <select
                   value={formData.test_type}
@@ -1248,7 +1304,7 @@ const TestScheduler = () => {
                   className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300"
                   required
                 >
-                  <option value="">Select test type</option>
+                  <option value="">{t('testContent.scheduler.selectTest')}</option>
                   {testTypes.map((test) => (
                     <option key={test.value} value={test.value}>
                       {test.label}
@@ -1260,7 +1316,7 @@ const TestScheduler = () => {
               {/* Frequency */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Frequency
+                  {t('testContent.scheduler.frequency')}
                 </label>
                 <select
                   value={formData.frequency}
@@ -1278,7 +1334,7 @@ const TestScheduler = () => {
               {/* Scheduled Date */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Scheduled Date *
+                  {t('testContent.scheduler.scheduledDate')} *
                 </label>
                 <input
                   type="date"
@@ -1292,7 +1348,7 @@ const TestScheduler = () => {
               {/* Scheduled Time */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Scheduled Time
+                  {t('testContent.scheduler.scheduledTime')}
                 </label>
                 <input
                   type="time"
@@ -1306,14 +1362,14 @@ const TestScheduler = () => {
             {/* Notes */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                Notes (Optional)
+                {t('testContent.scheduler.notes')}
               </label>
               <textarea
                 value={formData.notes}
                 onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
                 rows="3"
                 className="w-full px-4 py-3 border border-gray-300 rounded-2xl focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all duration-300"
-                placeholder="Add any notes or reminders..."
+                placeholder={t('testContent.scheduler.notesPlaceholder')}
               />
             </div>
 
@@ -1328,13 +1384,13 @@ const TestScheduler = () => {
                 }}
                 className="px-6 py-3 border-2 border-gray-300 text-gray-700 font-medium rounded-2xl hover:bg-gray-50 transition-all duration-300"
               >
-                Cancel
+                {t('testContent.scheduler.cancel')}
               </button>
               <button
                 type="submit"
                 className="px-6 py-3 bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-medium rounded-2xl shadow-soft hover:shadow-medium transition-all duration-300 transform hover:-translate-y-1"
               >
-                {editingSchedule ? 'Update Schedule' : 'Create Schedule'}
+                {editingSchedule ? t('testContent.scheduler.editSchedule') : t('testContent.scheduler.saveSchedule')}
               </button>
             </div>
           </form>
@@ -1350,16 +1406,16 @@ const TestScheduler = () => {
         {schedules.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-3xl shadow-soft">
             <Calendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-            <h4 className="text-lg font-semibold text-gray-900 mb-2">No schedules yet</h4>
+            <h4 className="text-lg font-semibold text-gray-900 mb-2">{t('testContent.scheduler.noSchedules')}</h4>
             <p className="text-gray-500 mb-4">
-              Schedule your first cognitive test to start building a regular testing routine.
+              {t('testContent.scheduler.scheduleFirst')}
             </p>
             <button
               onClick={() => setShowForm(true)}
               className="inline-flex items-center px-4 py-2 bg-primary-600 text-white font-medium rounded-xl hover:bg-primary-700 transition-colors duration-300"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Schedule Test
+              {t('testContent.scheduler.addSchedule')}
             </button>
           </div>
         ) : (
