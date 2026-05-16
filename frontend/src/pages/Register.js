@@ -1,11 +1,13 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { User, Mail, Lock, Calendar, UserCheck, Brain, Eye, EyeOff, ArrowRight, CheckCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
 const Register = () => {
   const { register } = useAuth();
+  const { t } = useTranslation();
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
@@ -32,12 +34,12 @@ const Register = () => {
     e.preventDefault();
     
     if (formData.password !== formData.confirmPassword) {
-      toast.error('Passwords do not match');
+      toast.error(t('auth.passwordMismatch'));
       return;
     }
 
     if (formData.password.length < 6) {
-      toast.error('Password must be at least 6 characters long');
+      toast.error(t('auth.passwordShort'));
       return;
     }
 
@@ -55,7 +57,8 @@ const Register = () => {
       });
 
       if (result.success) {
-        navigate('/dashboard');
+        const baselineIncomplete = result.user?.baselineCompleted === false;
+        navigate(baselineIncomplete ? '/baseline' : '/dashboard');
       }
     } catch (error) {
       console.error('Registration error:', error);
@@ -75,9 +78,9 @@ const Register = () => {
     if (/[0-9]/.test(formData.password)) score++;
     if (/[^A-Za-z0-9]/.test(formData.password)) score++;
 
-    if (score <= 2) return { score, color: 'danger', text: 'Weak' };
-    if (score <= 4) return { score, color: 'warning', text: 'Fair' };
-    return { score, color: 'success', text: 'Strong' };
+    if (score <= 2) return { score, color: 'danger', text: t('auth.weak') };
+    if (score <= 4) return { score, color: 'warning', text: t('auth.fair') };
+    return { score, color: 'success', text: t('auth.strong') };
   };
 
   const strength = passwordStrength();
@@ -91,10 +94,10 @@ const Register = () => {
             <Brain className="h-10 w-10 text-white" />
           </div>
           <h2 className="text-4xl font-display font-bold text-gray-900 mb-2">
-            Create Your Account
+            {t('auth.createAccount')}
           </h2>
           <p className="text-lg text-gray-600">
-            Join Dementia Tracker to monitor your cognitive health
+            {t('home.tagline')}
           </p>
         </div>
 

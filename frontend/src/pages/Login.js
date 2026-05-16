@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Mail, Lock, Brain, Eye, EyeOff, ArrowRight } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 import { useAuth } from '../contexts/AuthContext';
 import toast from 'react-hot-toast';
 
@@ -13,6 +14,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { t } = useTranslation();
 
   const handleChange = (e) => {
     setFormData({
@@ -29,7 +31,8 @@ const Login = () => {
       const result = await login(formData.email, formData.password);
       if (result.success) {
         toast.success('Welcome back! 🎉');
-        navigate('/dashboard');
+        const baselineIncomplete = result.user?.baselineCompleted === false;
+        navigate(baselineIncomplete ? '/baseline' : '/dashboard');
       }
     } catch (error) {
       console.error('Login error:', error);
@@ -47,10 +50,10 @@ const Login = () => {
             <Brain className="h-10 w-10 text-white" />
           </div>
           <h2 className="text-4xl font-display font-bold text-gray-900 mb-2">
-            Welcome Back
+            {t('auth.welcomeBack')}
           </h2>
           <p className="text-lg text-gray-600">
-            Sign in to continue monitoring your cognitive health
+            {t('auth.signInToContinue')}
           </p>
         </div>
 
@@ -60,7 +63,7 @@ const Login = () => {
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Email address
+                {t('auth.emailAddress')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -72,7 +75,7 @@ const Login = () => {
                   type="email"
                   required
                   className="appearance-none relative block w-full pl-10 pr-3 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-all duration-300"
-                  placeholder="Enter your email"
+                  placeholder={t('auth.emailAddress')}
                   value={formData.email}
                   onChange={handleChange}
                 />
@@ -82,7 +85,7 @@ const Login = () => {
             {/* Password Field */}
             <div>
               <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Password
+                {t('auth.password')}
               </label>
               <div className="relative">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -94,7 +97,7 @@ const Login = () => {
                   type={showPassword ? 'text' : 'password'}
                   required
                   className="appearance-none relative block w-full pl-10 pr-12 py-3 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-2xl focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 focus:z-10 sm:text-sm transition-all duration-300"
-                  placeholder="Enter your password"
+                  placeholder={t('auth.password')}
                   value={formData.password}
                   onChange={handleChange}
                 />
@@ -122,12 +125,12 @@ const Login = () => {
                   className="h-4 w-4 text-primary-600 focus:ring-primary-500 border-gray-300 rounded"
                 />
                 <label htmlFor="remember-me" className="ml-2 block text-sm text-gray-700">
-                  Remember me
+                  {t('auth.rememberMe')}
                 </label>
               </div>
               <div className="text-sm">
                 <button type="button" className="font-medium text-primary-600 hover:text-primary-500 transition-colors duration-300">
-                  Forgot password?
+                  {t('auth.forgotPassword')}
                 </button>
               </div>
             </div>
@@ -146,7 +149,7 @@ const Login = () => {
                   </div>
                 ) : (
                   <div className="flex items-center">
-                    Sign in
+                    {t('auth.signIn')}
                     <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform duration-300" />
                   </div>
                 )}
@@ -159,7 +162,7 @@ const Login = () => {
                 <div className="w-full border-t border-gray-300" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <span className="px-2 bg-white text-gray-500">{t('auth.signIn')} with</span>
               </div>
             </div>
 

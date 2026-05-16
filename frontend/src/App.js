@@ -11,6 +11,8 @@ import TestSession from './pages/TestSession';
 import Profile from './pages/Profile';
 import Reports from './pages/Reports';
 import RiskEvaluation from './pages/RiskEvaluation';
+import Settings from './pages/Settings';
+import Baseline from './pages/Baseline';
 import ProtectedRoute from './components/auth/ProtectedRoute';
 import StoryRecall from './pages/StoryRecall';
 
@@ -41,6 +43,18 @@ function App() {
           </ProtectedRoute>
         } />
         
+        <Route path="/baseline" element={
+          <ProtectedRoute>
+            <Baseline />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <Settings />
+          </ProtectedRoute>
+        } />
+
         <Route path="/tests" element={
           <ProtectedRoute>
             <Tests />

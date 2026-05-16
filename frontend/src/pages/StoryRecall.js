@@ -1,10 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { useAuth } from '../contexts/AuthContext';
+import { useTranslation } from 'react-i18next';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
 function StoryRecall() {
-  const { user, token } = useAuth();
+  const { t } = useTranslation();
   const recognitionRef = useRef(null);
   
   const [sessionId, setSessionId] = useState(null);
@@ -19,8 +19,6 @@ function StoryRecall() {
   const [isSpeaking, setIsSpeaking] = useState(false);
   const [isStoryVisible, setIsStoryVisible] = useState(false); // Hidden by default when narration starts
   const [isPaused, setIsPaused] = useState(false);
-  const [remainingText, setRemainingText] = useState('');
-  const [narrationResolve, setNarrationResolve] = useState(null);
 
   // Initialize Speech Recognition
   useEffect(() => {
@@ -83,14 +81,12 @@ function StoryRecall() {
         if (currentSentenceIndex >= sentences.length) {
           setIsSpeaking(false);
           setIsPaused(false);
-          setRemainingText('');
           resolve();
           return;
         }
 
         // Store remaining text for resume functionality
-        const remaining = sentences.slice(currentSentenceIndex).join('. ');
-        setRemainingText(remaining);
+        sentences.slice(currentSentenceIndex).join('. ');
 
         const utterance = new SpeechSynthesisUtterance(sentences[currentSentenceIndex].trim());
         utterance.rate = 0.9;
@@ -113,15 +109,11 @@ function StoryRecall() {
           console.error('Speech synthesis error:', error);
           setIsSpeaking(false);
           setIsPaused(false);
-          setRemainingText('');
           resolve();
         };
 
         window.speechSynthesis.speak(utterance);
       };
-
-      // Store resolve function for resume
-      setNarrationResolve(() => resolve);
       speakSentence();
     });
   };
@@ -306,8 +298,8 @@ function StoryRecall() {
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 py-8 px-4">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white rounded-lg shadow-xl p-8">
-          <h1 className="text-3xl font-bold text-gray-800 mb-2">Story Recall Assessment</h1>
-          <p className="text-gray-600 mb-6">Listen to the story carefully, then answer the recall questions.</p>
+          <h1 className="text-3xl font-bold text-gray-800 mb-2">{t('storyRecall.title')}</h1>
+          <p className="text-gray-600 mb-6">{t('storyRecall.subtitle')}</p>
 
           {/* Microphone Icon with Ripple Effects */}
           <div className="flex justify-center mb-6">
@@ -350,7 +342,7 @@ function StoryRecall() {
                 disabled={isLoading}
                 className="px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed shadow-lg"
               >
-                {isLoading ? 'Starting Session...' : 'Start Story Test'}
+                {isLoading ? t('storyRecall.startingSession') : t('storyRecall.startSession')}
               </button>
             </div>
           )}
@@ -359,7 +351,7 @@ function StoryRecall() {
           {storyText && (
             <div className="mt-6 p-6 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xl font-semibold text-gray-800">📖 The Story</h2>
+                <h2 className="text-xl font-semibold text-gray-800">{t('storyRecall.theStory')}</h2>
                 <div className="flex items-center gap-2">
                   {/* Play/Pause Controls */}
                   {isSpeaking && (
@@ -372,7 +364,7 @@ function StoryRecall() {
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
                           </svg>
-                          Resume
+                          {t('storyRecall.resume')}
                         </button>
                       ) : (
                         <button
@@ -382,7 +374,7 @@ function StoryRecall() {
                           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
                             <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM7 8a1 1 0 012 0v4a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v4a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
                           </svg>
-                          Pause
+                          {t('storyRecall.pause')}
                         </button>
                       )}
                     </>
@@ -391,7 +383,7 @@ function StoryRecall() {
                     onClick={() => setIsStoryVisible(!isStoryVisible)}
                     className="px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
                   >
-                    {isStoryVisible ? 'Hide Textual Story' : 'Show Textual Story'}
+                    {isStoryVisible ? t('storyRecall.hideStory') : t('storyRecall.showStory')}
                   </button>
                 </div>
               </div>
@@ -399,7 +391,7 @@ function StoryRecall() {
                 <p className="text-gray-700 whitespace-pre-wrap leading-relaxed">{storyText}</p>
               ) : (
                 <div className="text-center py-8 text-gray-500 italic">
-                  Story text is hidden. Listen to the narration, or click "Show Textual Story" to view the text.
+                  {t('storyRecall.storyHidden')}
                 </div>
               )}
             </div>
@@ -409,7 +401,7 @@ function StoryRecall() {
           {currentQuestionIndex >= 0 && currentQuestionIndex < questions.length && (
             <div className="mt-6 p-6 bg-yellow-50 rounded-lg border border-yellow-200">
               <h3 className="text-xl font-semibold text-gray-800 mb-4">
-                Question {currentQuestionIndex + 1} of {questions.length}
+                {t('storyRecall.questionOf', { current: currentQuestionIndex + 1, total: questions.length })}
               </h3>
               <p className="text-lg text-gray-700 mb-4">{questions[currentQuestionIndex]}</p>
               
@@ -425,7 +417,7 @@ function StoryRecall() {
                         : 'bg-green-500 text-white hover:bg-green-600'
                     } disabled:bg-gray-400 disabled:cursor-not-allowed`}
                   >
-                    {isListening ? '🛑 Stop Listening' : '🎤 Start Voice Input'}
+                    {isListening ? t('storyRecall.stopListening') : t('storyRecall.startVoice')}
                   </button>
                   
                   <button
@@ -433,13 +425,13 @@ function StoryRecall() {
                     disabled={isLoading}
                     className="px-6 py-3 bg-gray-500 text-white rounded-lg font-semibold hover:bg-gray-600 transition-colors disabled:bg-gray-400"
                   >
-                    ✍️ Type Instead
+                    {t('storyRecall.typeInstead')}
                   </button>
                   
                   {isListening && (
                     <div className="flex items-center gap-2 text-red-600">
                       <div className="w-3 h-3 bg-red-500 rounded-full animate-pulse"></div>
-                      <span className="font-medium">Listening...</span>
+                      <span className="font-medium">{t('storyRecall.listening')}</span>
                     </div>
                   )}
                 </div>
@@ -447,7 +439,7 @@ function StoryRecall() {
                 {/* Answer Input */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Your Answer {isListening && '(Speaking will auto-fill this)'}
+                    {t('storyRecall.yourAnswer')} {isListening && `(${t('storyRecall.speakingAutofill')})`}
                   </label>
                   <textarea
                     value={userAnswer}
@@ -457,12 +449,12 @@ function StoryRecall() {
                         handleSubmitAnswer();
                       }
                     }}
-                    placeholder="Type or speak your answer here..."
+                    placeholder={t('storyRecall.answerPlaceholder')}
                     className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                     rows="4"
                     disabled={isLoading}
                   />
-                  <p className="mt-1 text-sm text-gray-500">Press Ctrl+Enter to submit</p>
+                  <p className="mt-1 text-sm text-gray-500">{t('storyRecall.ctrlEnter')}</p>
                 </div>
 
                 {/* Submit Button */}
@@ -471,7 +463,7 @@ function StoryRecall() {
                   disabled={!userAnswer.trim() || isLoading}
                   className="w-full px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
                 >
-                  {isLoading ? 'Processing...' : `Submit Answer ${currentQuestionIndex + 1}/${questions.length}`}
+                  {isLoading ? t('storyRecall.processing') : t('storyRecall.submitAnswer', { current: currentQuestionIndex + 1, total: questions.length })}
                 </button>
               </div>
             </div>
@@ -480,18 +472,18 @@ function StoryRecall() {
           {/* Evaluations Display */}
           {evaluations.length > 0 && (
             <div className="mt-8">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-4">📊 Your Answers & Evaluations</h2>
+              <h2 className="text-2xl font-semibold text-gray-800 mb-4">{t('storyRecall.answersTitle')}</h2>
               <div className="space-y-4">
                 {evaluations.map((evalItem, idx) => (
                   <div key={idx} className="p-5 bg-gray-50 rounded-lg border border-gray-200">
                     <div className="flex items-start justify-between mb-2">
-                      <h4 className="font-semibold text-gray-800">Question {idx + 1}</h4>
+                      <h4 className="font-semibold text-gray-800">{t('storyRecall.question', { number: idx + 1 })}</h4>
                       <span className={`px-4 py-2 rounded-full text-sm font-semibold ${
                         evalItem.evaluation.isCorrect 
                           ? 'bg-green-100 text-green-800' 
                           : 'bg-red-100 text-red-800'
                       }`}>
-                        {evalItem.evaluation.isCorrect ? '✓ Correct' : '✗ Wrong'}
+                        {evalItem.evaluation.isCorrect ? t('storyRecall.correct') : t('storyRecall.wrong')}
                       </span>
                     </div>
                     <p className="text-gray-700 mb-2"><strong>Q:</strong> {evalItem.question}</p>
@@ -508,10 +500,10 @@ function StoryRecall() {
           {/* Final Report */}
           {finalReport && (
             <div className="mt-8 p-6 bg-gradient-to-r from-blue-100 to-indigo-100 rounded-lg border-2 border-blue-300">
-              <h2 className="text-2xl font-bold text-gray-800 mb-4">📈 Final Assessment Report</h2>
+              <h2 className="text-2xl font-bold text-gray-800 mb-4">{t('storyRecall.finalReport')}</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div className="bg-white p-4 rounded-lg">
-                  <p className="text-gray-600 mb-2">Risk-Free Score</p>
+                  <p className="text-gray-600 mb-2">{t('storyRecall.riskFreeScore')}</p>
                   <p className={`text-4xl font-bold ${
                     finalReport.riskFreePercentage >= 80 ? 'text-green-600' :
                     finalReport.riskFreePercentage >= 60 ? 'text-yellow-600' :
@@ -519,32 +511,31 @@ function StoryRecall() {
                   }`}>
                     {finalReport.riskFreePercentage}%
                   </p>
-                  <p className="text-sm text-gray-500 mt-1">Risk-Free from Dementia</p>
+                  <p className="text-sm text-gray-500 mt-1">{t('storyRecall.riskFreeFromDementia')}</p>
                 </div>
                 <div className="bg-white p-4 rounded-lg">
-                  <p className="text-gray-600 mb-2">Correct Answers</p>
+                  <p className="text-gray-600 mb-2">{t('storyRecall.correctAnswers')}</p>
                   <p className="text-3xl font-bold text-green-600">{finalReport.correctAnswers}/{finalReport.totalQuestions}</p>
                 </div>
                 <div className="bg-white p-4 rounded-lg">
-                  <p className="text-gray-600 mb-2">Incorrect Answers</p>
+                  <p className="text-gray-600 mb-2">{t('storyRecall.incorrectAnswers')}</p>
                   <p className="text-3xl font-bold text-red-600">{finalReport.incorrectAnswers}/{finalReport.totalQuestions}</p>
                 </div>
               </div>
               
               <div className="bg-white p-4 rounded-lg mb-4">
-                <h3 className="font-semibold text-gray-800 mb-2">Summary</h3>
+                <h3 className="font-semibold text-gray-800 mb-2">{t('storyRecall.summary')}</h3>
                 <p className="text-gray-700">
-                  You answered <strong>{finalReport.correctAnswers} out of {finalReport.totalQuestions}</strong> questions correctly.
-                  This corresponds to a <strong>{finalReport.riskFreePercentage}%</strong> risk-free-from-dementia score.
+                  {t('storyRecall.summaryText', { correct: finalReport.correctAnswers, total: finalReport.totalQuestions, percent: finalReport.riskFreePercentage })}
                 </p>
                 {finalReport.riskFreePercentage >= 80 && (
-                  <p className="text-green-700 font-medium mt-2">✓ Excellent memory recall performance!</p>
+                  <p className="text-green-700 font-medium mt-2">{t('storyRecall.excellentRecall')}</p>
                 )}
                 {finalReport.riskFreePercentage >= 60 && finalReport.riskFreePercentage < 80 && (
-                  <p className="text-yellow-700 font-medium mt-2">⚠️ Good memory recall, but there's room for improvement.</p>
+                  <p className="text-yellow-700 font-medium mt-2">{t('storyRecall.goodRecall')}</p>
                 )}
                 {finalReport.riskFreePercentage < 60 && (
-                  <p className="text-red-700 font-medium mt-2">⚠️ Consider consulting with a healthcare professional for further assessment.</p>
+                  <p className="text-red-700 font-medium mt-2">{t('storyRecall.lowRecall')}</p>
                 )}
               </div>
               
@@ -560,7 +551,7 @@ function StoryRecall() {
                 }}
                 className="mt-4 px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 transition-colors"
               >
-                Start New Test
+                {t('storyRecall.startNewTest')}
               </button>
             </div>
           )}

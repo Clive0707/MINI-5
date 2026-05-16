@@ -22,6 +22,11 @@ const ProtectedRoute = ({ children }) => {
     return <Navigate to="/login" state={{ from: location }} replace />;
   }
 
+  // Force baseline calibration for new users
+  if (user && user.baselineCompleted === false && location.pathname !== '/baseline') {
+    return <Navigate to="/baseline" replace />;
+  }
+
   return children;
 };
 

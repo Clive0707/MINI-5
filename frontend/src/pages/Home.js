@@ -1,5 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 import { 
   Brain, 
   Shield, 
@@ -14,29 +15,31 @@ import {
 } from 'lucide-react';
 
 const Home = () => {
+  const { t } = useTranslation();
+
   const features = [
     {
       icon: Brain,
-      title: 'Cognitive Assessment',
-      description: 'Comprehensive tests to evaluate memory, attention, and executive function',
+      title: t('home.features.cognitiveAssessment'),
+      description: t('home.features.cognitiveAssessmentDesc'),
       color: 'primary'
     },
     {
       icon: Shield,
-      title: 'Early Detection',
-      description: 'Identify cognitive changes before they become significant',
+      title: t('home.features.earlyDetection'),
+      description: t('home.features.earlyDetectionDesc'),
       color: 'secondary'
     },
     {
       icon: TrendingUp,
-      title: 'Progress Tracking',
-      description: 'Monitor your cognitive health over time with detailed analytics',
+      title: t('home.features.progressTracking'),
+      description: t('home.features.progressTrackingDesc'),
       color: 'accent'
     },
     {
       icon: Clock,
-      title: 'Regular Monitoring',
-      description: 'Scheduled assessments to maintain consistent health tracking',
+      title: t('home.features.regularMonitoring'),
+      description: t('home.features.regularMonitoringDesc'),
       color: 'success'
     }
   ];
@@ -66,10 +69,10 @@ const Home = () => {
   ];
 
   const stats = [
-    { number: '10,000+', label: 'Active Users' },
-    { number: '50,000+', label: 'Tests Completed' },
-    { number: '95%', label: 'Accuracy Rate' },
-    { number: '24/7', label: 'Support Available' }
+    { number: '10,000+', label: t('home.stats.activeUsers') },
+    { number: '50,000+', label: t('home.stats.testCompleted') },
+    { number: '95%', label: t('home.stats.accuracyRate') },
+    { number: '24/7', label: t('home.stats.supportAvailable') }
   ];
 
   return (
@@ -81,19 +84,18 @@ const Home = () => {
           <div className="text-center">
             <div className="inline-flex items-center px-4 py-2 rounded-full bg-primary-100 text-primary-800 text-sm font-medium mb-8 animate-fade-in">
               <Brain className="w-4 h-4 mr-2" />
-              Cognitive Health Monitoring Platform
+              {t('home.tagline')}
             </div>
             
             <h1 className="text-5xl md:text-6xl font-display font-bold text-gray-900 mb-6 leading-tight">
-              Take Control of Your
+              {t('home.title')}
               <span className="block bg-gradient-to-r from-primary-600 to-secondary-600 bg-clip-text text-transparent">
-                Cognitive Health
+                {t('home.subtitle')}
               </span>
             </h1>
             
             <p className="text-xl text-gray-600 mb-8 max-w-3xl mx-auto leading-relaxed">
-              Early detection and regular monitoring of cognitive function can make a significant difference. 
-              Join thousands of users who are proactively managing their brain health.
+              {t('home.description')}
             </p>
             
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -101,7 +103,7 @@ const Home = () => {
                 to="/register"
                 className="inline-flex items-center px-8 py-4 bg-gradient-to-r from-primary-600 to-secondary-600 text-white font-semibold rounded-2xl shadow-soft hover:shadow-medium transition-all duration-300 transform hover:-translate-y-1"
               >
-                Start Your Assessment
+                {t('home.signUp')}
                 <ArrowRight className="ml-2 w-5 h-5" />
               </Link>
               <Link
